@@ -213,62 +213,107 @@ export function SankeyDiagram() {
       .attr('stroke-width', (d) => Math.max(2, d.width || 2))
       .attr('opacity', 0.4); // Lighter opacity for better particle visibility
 
-    // Add animated white particles along each link to show processing
+    // Group links by entity for sequential entity animation (parallel within entity)
+    const linksByEntity: { [key: number]: { link: SankeyLinkRendered; pathElement: SVGPathElement; particle: d3.Selection<SVGCircleElement, unknown, null, undefined> }[] } = {};
+    
     linkSelection.each(function(d: SankeyLinkRendered) {
       const pathElement = this as SVGPathElement;
-      const pathLength = pathElement.getTotalLength();
+      const sourceNode = d.source as SankeyNodeExtra;
+      const entityIndex = data.nodes.findIndex(n => n.name === sourceNode.name && n.type === 'entity');
       
-      // Single particle per link for smoother performance
+      if (entityIndex === undefined || entityIndex < 0) return;
+      
+      if (!linksByEntity[entityIndex]) {
+        linksByEntity[entityIndex] = [];
+      }
+      
+      // Create particle for this link
       const particle = g.append('circle')
-        .attr('r', 2.5) // Slightly larger for visibility
-        .attr('fill', '#ffffff') // White color
+        .attr('r', 2.5)
+        .attr('fill', '#ffffff')
         .attr('opacity', 0)
         .attr('filter', 'url(#glow)');
       
-      // Optimized smooth animation using requestAnimationFrame
-      let animationId: number | null = null;
-      let startTime: number | null = null;
-      const animationDuration = 1500; // Faster for smoother feel
-      const pauseDuration = 800; // Reduced pause between animations
-      
-      function animateParticle(currentTime: number) {
-        if (startTime === null) {
-          startTime = currentTime;
-        }
-        
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / animationDuration, 1);
-        
-        if (progress < 1) {
-          // Animate particle along path
-          const point = pathElement.getPointAtLength(progress * pathLength);
-          particle
-            .attr('cx', point.x)
-            .attr('cy', point.y)
-            .attr('opacity', 0.9);
-          
-          animationId = requestAnimationFrame(animateParticle);
-        } else {
-          // Animation complete, fade out quickly
-          particle
-            .transition()
-            .duration(100)
-            .attr('opacity', 0)
-            .on('end', function() {
-              // Reset and wait before next animation
-              startTime = null;
-              setTimeout(() => {
-                animationId = requestAnimationFrame(animateParticle);
-              }, pauseDuration);
-            });
-        }
+      linksByEntity[entityIndex].push({
+        link: d,
+        pathElement,
+        particle,
+      });
+    });
+
+    // Sequential entity animation - all links of one entity animate simultaneously
+    const animationDuration = 1500;
+    const pauseBetweenEntities = 1000; // Pause after entity completes all transactions
+    
+    function animateEntity(entityIndex: number) {
+      const entityLinks = linksByEntity[entityIndex];
+      if (!entityLinks || entityLinks.length === 0) {
+        // Move to next entity
+        const nextEntityIndex = (entityIndex + 1) % Object.keys(linksByEntity).length;
+        setTimeout(() => {
+          animateEntity(nextEntityIndex);
+        }, pauseBetweenEntities);
+        return;
       }
       
-      // Start animation with initial delay
-      setTimeout(() => {
+      // Track completed animations for this entity
+      let completedCount = 0;
+      const totalLinks = entityLinks.length;
+      
+      // Animate all links of this entity simultaneously
+      entityLinks.forEach(({ pathElement, particle }) => {
+        const pathLength = pathElement.getTotalLength();
+        let animationId: number | null = null;
+        let startTime: number | null = null;
+        
+        function animateParticle(currentTime: number) {
+          if (startTime === null) {
+            startTime = currentTime;
+          }
+          
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / animationDuration, 1);
+          
+          if (progress < 1) {
+            const point = pathElement.getPointAtLength(progress * pathLength);
+            particle
+              .attr('cx', point.x)
+              .attr('cy', point.y)
+              .attr('opacity', 0.9);
+            
+            animationId = requestAnimationFrame(animateParticle);
+          } else {
+            // Animation complete, fade out
+            particle
+              .transition()
+              .duration(100)
+              .attr('opacity', 0)
+              .on('end', function() {
+                if (animationId !== null) {
+                  cancelAnimationFrame(animationId);
+                }
+                completedCount++;
+                
+                // When all links of this entity are done, move to next entity
+                if (completedCount === totalLinks) {
+                  const nextEntityIndex = (entityIndex + 1) % Object.keys(linksByEntity).length;
+                  setTimeout(() => {
+                    animateEntity(nextEntityIndex);
+                  }, pauseBetweenEntities);
+                }
+              });
+          }
+        }
+        
+        // Start animation for this link
         animationId = requestAnimationFrame(animateParticle);
-      }, Math.random() * 1000); // Stagger start times for different links
-    });
+      });
+    }
+    
+    // Start with Entity 0 (first entity)
+    setTimeout(() => {
+      animateEntity(0);
+    }, 500);
 
     // Draw nodes - static with entity-specific colors
     const node = g
