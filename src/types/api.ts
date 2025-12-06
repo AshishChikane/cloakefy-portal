@@ -34,10 +34,14 @@ export interface Transaction {
   timestamp: string;
 }
 
-export interface TransferRequest {
-  entityId: string;
+export interface TransferRecipient {
   subUserId: string;
   amount: number;
+}
+
+export interface TransferRequest {
+  entityId: string;
+  recipients: TransferRecipient[];
   token: BaseToken;
 }
 

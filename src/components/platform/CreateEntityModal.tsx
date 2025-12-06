@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CreateEntityRequest, EntityType, BaseToken } from '@/types/api';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 
 interface CreateEntityModalProps {
   open: boolean;
@@ -37,27 +37,36 @@ export function CreateEntityModal({ open, onOpenChange, onSubmit }: CreateEntity
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border">
+      <DialogContent className="bg-card border-border max-w-md mx-4 sm:mx-auto">
         <DialogHeader>
-          <DialogTitle className="text-foreground">Create New Entity</DialogTitle>
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20 flex-shrink-0">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+            </div>
+            <DialogTitle className="text-foreground text-lg sm:text-xl">Create New Entity</DialogTitle>
+          </div>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Set up a new entity to manage encrypted distributions
+          </p>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-5 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 mt-4 sm:mt-6">
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-foreground">Entity Name</Label>
+            <Label htmlFor="name" className="text-foreground font-medium text-sm sm:text-base">Entity Name</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., My DAO Treasury"
               required
+              className="bg-secondary/50 border-border h-10 sm:h-11 text-sm sm:text-base"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="type" className="text-foreground">Entity Type</Label>
+            <Label htmlFor="type" className="text-foreground font-medium text-sm sm:text-base">Entity Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as EntityType)}>
-              <SelectTrigger className="bg-secondary/50 border-border">
+              <SelectTrigger className="bg-secondary/50 border-border h-10 sm:h-11 text-sm sm:text-base">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
@@ -70,9 +79,9 @@ export function CreateEntityModal({ open, onOpenChange, onSubmit }: CreateEntity
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="token" className="text-foreground">Base Token</Label>
+            <Label htmlFor="token" className="text-foreground font-medium text-sm sm:text-base">Base Token</Label>
             <Select value={baseToken} onValueChange={(v) => setBaseToken(v as BaseToken)}>
-              <SelectTrigger className="bg-secondary/50 border-border">
+              <SelectTrigger className="bg-secondary/50 border-border h-10 sm:h-11 text-sm sm:text-base">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
@@ -83,12 +92,28 @@ export function CreateEntityModal({ open, onOpenChange, onSubmit }: CreateEntity
             </Select>
           </div>
           
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="flex-1 text-sm sm:text-base" 
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={loading || !name.trim()}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Entity'}
+            <Button 
+              type="submit" 
+              className="flex-1 font-semibold text-sm sm:text-base" 
+              disabled={loading || !name.trim()}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Creating...
+                </>
+              ) : (
+                'Create Entity'
+              )}
             </Button>
           </div>
         </form>

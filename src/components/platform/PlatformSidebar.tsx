@@ -9,9 +9,9 @@ interface PlatformSidebarProps {
 }
 
 const navItems = [
-  { id: 'entities', label: 'Entities', icon: Building2 },
-  { id: 'transactions', label: 'Transactions', icon: History },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'entities', label: 'Entities', icon: Building2, description: 'Manage your entities' },
+  { id: 'transactions', label: 'Transactions', icon: History, description: 'View all transactions' },
+  { id: 'settings', label: 'Settings', icon: Settings, description: 'Platform settings' },
 ];
 
 export function PlatformSidebar({ activeTab, onTabChange, mobileOpen, onMobileClose }: PlatformSidebarProps) {
@@ -27,36 +27,75 @@ export function PlatformSidebar({ activeTab, onTabChange, mobileOpen, onMobileCl
       
       {/* Sidebar */}
       <aside className={cn(
-        "fixed top-16 left-0 bottom-0 w-64 bg-sidebar border-r border-sidebar-border z-50 transition-transform lg:translate-x-0",
+        "fixed top-16 left-0 bottom-0 w-72 bg-gradient-to-b from-sidebar via-sidebar to-sidebar/95 border-r border-sidebar-border/50 z-50 transition-transform lg:translate-x-0 shadow-2xl",
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="flex items-center justify-between p-4 lg:hidden">
-          <span className="font-semibold text-sidebar-foreground">Navigation</span>
-          <button onClick={onMobileClose} className="p-1 hover:bg-sidebar-accent rounded">
+        {/* Mobile close button */}
+        <div className="flex items-center justify-between p-4 lg:hidden border-b border-sidebar-border/50">
+          <span className="font-semibold text-sidebar-foreground text-sm uppercase tracking-wider">Navigation</span>
+          <button 
+            onClick={onMobileClose} 
+            className="p-2 hover:bg-sidebar-accent rounded-lg transition-colors"
+          >
             <X className="w-5 h-5 text-sidebar-foreground" />
           </button>
         </div>
         
-        <nav className="p-4 space-y-1">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                onTabChange(item.id);
-                onMobileClose();
-              }}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                activeTab === item.id
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent"
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              {item.label}
-            </button>
-          ))}
+        {/* Navigation */}
+        <nav className="p-4 space-y-2">
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  onTabChange(item.id);
+                  onMobileClose();
+                }}
+                className={cn(
+                  "w-full flex items-start gap-4 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden",
+                  isActive
+                    ? "bg-gradient-to-r from-sidebar-primary/20 to-sidebar-primary/10 text-white shadow-lg shadow-sidebar-primary/10 border border-sidebar-primary/30"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                )}
+              >
+                {/* Active indicator */}
+                {isActive && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-primary/60 rounded-r-full" />
+                )}
+                
+                {/* Icon */}
+                <div className={cn(
+                  "relative flex-shrink-0 transition-transform duration-200",
+                  isActive ? "text-white" : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground"
+                )}>
+                  <item.icon className="w-5 h-5" />
+                  {isActive && (
+                    <div className="absolute inset-0 bg-primary/20 blur-md rounded-full" />
+                  )}
+                </div>
+                
+                {/* Label and description */}
+                <div className="flex-1 text-left">
+                  <div className="font-semibold">{item.label}</div>
+                  <div className={cn(
+                    "text-xs mt-0.5 transition-colors",
+                    isActive ? "text-white/80" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/60"
+                  )}>
+                    {item.description}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </nav>
+
+        {/* Footer decoration */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-sidebar-border/50">
+          <div className="text-xs text-sidebar-foreground/40 text-center">
+            Powered by x402 Settlement
+          </div>
+        </div>
       </aside>
     </>
   );

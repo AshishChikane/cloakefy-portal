@@ -14,11 +14,11 @@ const methodColors = {
 
 export function EndpointBox({ method, path }: EndpointBoxProps) {
   return (
-    <div className="flex items-center gap-3 p-4 rounded-lg bg-secondary/30 border border-border">
-      <span className={cn('px-2 py-1 rounded text-xs font-bold', methodColors[method])}>
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg bg-secondary/30 border border-border">
+      <span className={cn('px-2 py-1 rounded text-xs font-bold flex-shrink-0', methodColors[method])}>
         {method}
       </span>
-      <code className="text-sm font-mono text-foreground">{path}</code>
+      <code className="text-xs sm:text-sm font-mono text-foreground break-all">{path}</code>
     </div>
   );
 }

@@ -137,36 +137,54 @@ export async function createSubUser(entityId: string, data: CreateSubUserRequest
   return newSubUser;
 }
 
-export async function createTransfer(data: TransferRequest): Promise<Transaction> {
-  await delay(1000);
+export async function createTransfer(data: TransferRequest): Promise<Transaction[]> {
+  await delay(1500);
   const entity = mockEntities.find(e => e.id === data.entityId);
-  const subUser = mockSubUsers.find(su => su.id === data.subUserId);
   
-  if (!entity || !subUser) {
-    throw new Error('Entity or SubUser not found');
+  if (!entity) {
+    throw new Error('Entity not found');
   }
   
-  if (entity.balance < data.amount) {
-    throw new Error('Insufficient balance');
+  // Calculate total amount
+  const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
+  
+  if (entity.balance < totalAmount) {
+    throw new Error(`Insufficient balance. Required: ${totalAmount} ${data.token}, Available: ${entity.balance} ${data.token}`);
   }
   
-  entity.balance -= data.amount;
+  // Validate all recipients exist
+  const transactions: Transaction[] = [];
   
-  const newTx: Transaction = {
-    id: 'tx' + (mockTransactions.length + 1),
-    entityId: data.entityId,
-    fromAddress: entity.smartWalletAddress,
-    toAddress: subUser.walletAddress,
-    toName: subUser.name,
-    amount: data.amount,
-    token: data.token,
-    status: 'Completed',
-    txHash: '0x' + randomHex(64),
-    timestamp: new Date().toISOString(),
-  };
+  for (const recipient of data.recipients) {
+    const subUser = mockSubUsers.find(su => su.id === recipient.subUserId);
+    
+    if (!subUser) {
+      throw new Error(`SubUser with ID ${recipient.subUserId} not found`);
+    }
+    
+    const newTx: Transaction = {
+      id: 'tx' + (mockTransactions.length + transactions.length + 1),
+      entityId: data.entityId,
+      fromAddress: entity.smartWalletAddress,
+      toAddress: subUser.walletAddress,
+      toName: subUser.name,
+      amount: recipient.amount,
+      token: data.token,
+      status: 'Completed',
+      txHash: '0x' + randomHex(64),
+      timestamp: new Date().toISOString(),
+    };
+    
+    transactions.push(newTx);
+  }
   
-  mockTransactions.unshift(newTx);
-  return newTx;
+  // Deduct total amount from entity balance
+  entity.balance -= totalAmount;
+  
+  // Add all transactions to mock store
+  mockTransactions.unshift(...transactions);
+  
+  return transactions;
 }
 
 export async function getTransactions(entityId: string): Promise<Transaction[]> {

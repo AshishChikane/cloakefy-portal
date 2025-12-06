@@ -25,15 +25,23 @@ const subUser = await client.subUsers.create(entity.id, {
   walletAddress: '0x1234...',
 });
 
-// Create a transfer
-const transfer = await client.transfers.create({
+// Create a transfer to multiple recipients
+const transfers = await client.transfers.create({
   entityId: entity.id,
-  subUserId: subUser.id,
-  amount: 50,
+  recipients: [
+    {
+      subUserId: subUser.id,
+      amount: 50,
+    },
+    {
+      subUserId: anotherSubUser.id,
+      amount: 75,
+    },
+  ],
   token: 'eAVAX',
 });
 
-console.log('Transfer completed:', transfer.txHash);`;
+console.log('Transfers completed:', transfers.map(t => t.txHash));`;
 
   const typesExample = `import type {
   Entity,
@@ -48,36 +56,36 @@ console.log('Transfer completed:', transfer.txHash);`;
 const entity: Entity = await client.entities.get('ent_abc123');`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-4">SDK Usage</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 sm:mb-4">SDK Usage</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Use our JavaScript/TypeScript SDK for easier integration with eX402.
         </p>
       </div>
       
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-foreground">Installation</h3>
+      <div className="space-y-3 sm:space-y-4">
+        <h3 className="text-base sm:text-lg font-semibold text-foreground">Installation</h3>
         <CodeBlock code={installCode} title="Terminal" />
       </div>
       
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-foreground">Initialization</h3>
+      <div className="space-y-3 sm:space-y-4">
+        <h3 className="text-base sm:text-lg font-semibold text-foreground">Initialization</h3>
         <CodeBlock code={initCode} title="JavaScript/TypeScript" />
       </div>
       
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-foreground">Usage Example</h3>
+      <div className="space-y-3 sm:space-y-4">
+        <h3 className="text-base sm:text-lg font-semibold text-foreground">Usage Example</h3>
         <CodeBlock code={usageExample} title="JavaScript/TypeScript" />
       </div>
       
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-foreground">TypeScript Support</h3>
+      <div className="space-y-3 sm:space-y-4">
+        <h3 className="text-base sm:text-lg font-semibold text-foreground">TypeScript Support</h3>
         <CodeBlock code={typesExample} title="TypeScript" />
       </div>
       
-      <div className="glass-card p-4">
-        <p className="text-sm text-muted-foreground">
+      <div className="glass-card p-3 sm:p-4">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           <strong className="text-foreground">Note:</strong> The SDK package is currently in development. 
           Check back soon for the official release.
         </p>

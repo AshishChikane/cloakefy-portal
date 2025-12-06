@@ -43,10 +43,10 @@ const entity = await response.json();`;
 }`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-4">Create Entity</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 sm:mb-4">Create Entity</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Create a new entity (organization) with an associated smart wallet for encrypted distributions.
         </p>
       </div>
@@ -55,14 +55,14 @@ const entity = await response.json();`;
       
       <ParamsTable params={params} />
       
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-foreground">Examples</h3>
+      <div className="space-y-3 sm:space-y-4">
+        <h3 className="text-base sm:text-lg font-semibold text-foreground">Examples</h3>
         <CodeBlock code={curlExample} title="cURL" />
         <CodeBlock code={jsExample} title="JavaScript" />
       </div>
       
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-foreground">Response</h3>
+      <div className="space-y-3 sm:space-y-4">
+        <h3 className="text-base sm:text-lg font-semibold text-foreground">Response</h3>
         <CodeBlock code={responseExample} title="200 OK" />
       </div>
     </div>

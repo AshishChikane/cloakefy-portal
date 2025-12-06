@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { ParticleField } from '@/components/ui/ParticleField';
 import { GradientOrbs } from '@/components/ui/GradientOrbs';
 import { TypewriterText } from '@/components/ui/TypewriterText';
-import { TiltCard } from '@/components/ui/TiltCard';
 import { MagneticButton } from '@/components/ui/MagneticButton';
+import { SankeyDiagram } from '@/components/ui/SankeyDiagram';
 import { ArrowRight, ExternalLink, Shield, Zap, CheckCircle2, Sparkles } from 'lucide-react';
 
 const flowSteps = [
@@ -172,70 +172,11 @@ export function HeroSection() {
             </motion.div>
           </div>
           
-          {/* Right content - Flow diagram */}
+          {/* Right content - Sankey Diagram */}
           <motion.div variants={itemVariants} className="lg:pl-8">
-            <TiltCard className="w-full">
-              <div className="glass-card p-6 md:p-8 relative overflow-hidden">
-                {/* Animated border gradient */}
-                <motion.div
-                  className="absolute inset-0 rounded-xl opacity-50"
-                  style={{
-                    background: 'linear-gradient(90deg, transparent, hsl(var(--primary) / 0.3), transparent)',
-                    backgroundSize: '200% 100%',
-                  }}
-                  animate={{
-                    backgroundPosition: ['200% 0', '-200% 0'],
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: 'linear',
-                  }}
-                />
-                
-                <div className="relative">
-                  <div className="flex items-center gap-3 mb-6">
-                    <motion.div 
-                      className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center"
-                      animate={{ 
-                        boxShadow: ['0 0 0 0 hsl(var(--primary) / 0.4)', '0 0 0 10px hsl(var(--primary) / 0)', '0 0 0 0 hsl(var(--primary) / 0)']
-                      }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    >
-                      <Zap className="w-6 h-6 text-primary" />
-                    </motion.div>
-                    <div>
-                      <h3 className="font-semibold text-lg text-foreground">x402 Settlement Flow</h3>
-                      <p className="text-xs text-muted-foreground">Real-time encrypted processing</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {flowSteps.map((step, index) => (
-                      <motion.div 
-                        key={index} 
-                        className="flex items-start gap-3 group"
-                        custom={index}
-                        variants={stepVariants}
-                        initial="hidden"
-                        animate={isInView ? 'visible' : 'hidden'}
-                        whileHover={{ x: 5 }}
-                      >
-                        <motion.div 
-                          className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center mt-0.5 group-hover:bg-primary/40 transition-colors"
-                          whileHover={{ scale: 1.2 }}
-                        >
-                          <CheckCircle2 className="w-4 h-4 text-primary" />
-                        </motion.div>
-                        <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                          {step}
-                        </span>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </TiltCard>
+            <div className="w-full">
+              <SankeyDiagram />
+            </div>
           </motion.div>
         </motion.div>
       </div>

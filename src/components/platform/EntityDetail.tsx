@@ -6,7 +6,8 @@ import { TransferForm } from './TransferForm';
 import { TransactionHistory } from './TransactionHistory';
 import { getSubUsers, getTransactions, getEntityBalance, createSubUser, createTransfer } from '@/services/api';
 import { toast } from 'sonner';
-import { Copy, RefreshCw, ArrowLeft, Loader2, Wallet } from 'lucide-react';
+import { Copy, RefreshCw, ArrowLeft, Loader2, Wallet, TrendingUp, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface EntityDetailProps {
   entity: Entity;
@@ -70,11 +71,11 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
 
   const handleTransfer = async (data: TransferRequest) => {
     try {
-      const tx = await createTransfer(data);
-      setTransactions([tx, ...transactions]);
+      const txs = await createTransfer(data);
+      setTransactions([...txs, ...transactions]);
       const balance = await getEntityBalance(entity.id);
       onEntityUpdate({ ...entity, balance });
-      toast.success('Transfer completed successfully');
+      toast.success(`Successfully sent ${txs.length} transfer${txs.length !== 1 ? 's' : ''} to ${txs.length} recipient${txs.length !== 1 ? 's' : ''}`);
     } catch (error: any) {
       toast.error(error.message || 'Transfer failed');
       throw error;
@@ -89,71 +90,122 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
   const shortAddress = `${entity.smartWalletAddress.slice(0, 10)}...${entity.smartWalletAddress.slice(-8)}`;
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6"
+    >
+      {/* Back button */}
       <button
         onClick={onBack}
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group"
       >
-        <ArrowLeft className="w-4 h-4" />
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         Back to Entities
       </button>
 
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Wallet className="w-6 h-6 text-primary" />
+      {/* Header */}
+      <div className="flex items-center gap-2.5 sm:gap-3 pb-3 sm:pb-4 border-b border-border/50">
+        <div className="relative flex-shrink-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary/20 via-primary/15 to-primary/10 flex items-center justify-center border border-primary/20">
+            <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+          </div>
+          <div className="absolute -inset-0.5 bg-primary/20 rounded-xl blur-md opacity-50" />
         </div>
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">{entity.name}</h2>
-          <span className="text-sm text-muted-foreground">{entity.type}</span>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg sm:text-xl font-bold text-foreground mb-1 truncate">{entity.name}</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+              {entity.type}
+            </span>
+            <span className="text-xs text-muted-foreground">Entity Details</span>
+          </div>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+        <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-medium text-muted-foreground">Balance</span>
+            <TrendingUp className="w-3.5 h-3.5 text-green-400" />
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <p className="text-base sm:text-lg font-bold text-foreground">
+              {entity.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <span className="text-xs text-muted-foreground font-medium">{entity.baseToken}</span>
+          </div>
+        </div>
+        <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-medium text-muted-foreground">Sub Users</span>
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+          </div>
+          <p className="text-base sm:text-lg font-bold text-foreground">{subUsers.length}</p>
+        </div>
+        <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-medium text-muted-foreground">Transactions</span>
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+          </div>
+          <p className="text-base sm:text-lg font-bold text-foreground">{transactions.length}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         {/* Left column - Wallet Info */}
-        <div className="space-y-6">
-          <div className="glass-card p-5">
-            <h3 className="font-semibold text-foreground mb-4">Entity Wallet</h3>
+        <div className="space-y-4">
+          <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-3 sm:mb-4">
+              <h3 className="text-sm sm:text-base font-bold text-foreground">Wallet Information</h3>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={refreshBalance} 
+                disabled={refreshingBalance}
+                className="group w-full sm:w-auto"
+              >
+                {refreshingBalance ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
+                    Refresh
+                  </>
+                )}
+              </Button>
+            </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Smart Wallet Address</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">Smart Wallet Address</p>
                 <div className="flex items-center gap-2">
-                  <code className="text-sm text-foreground bg-secondary/50 px-3 py-1.5 rounded flex-1 overflow-hidden">
+                  <code className="text-xs font-mono text-foreground bg-secondary/50 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg flex-1 border border-border/50 break-all">
                     {shortAddress}
                   </code>
-                  <Button size="icon" variant="outline" onClick={copyAddress}>
-                    <Copy className="w-4 h-4" />
+                  <Button 
+                    size="icon" 
+                    variant="outline" 
+                    onClick={copyAddress}
+                    className="h-8 w-8 hover:bg-primary/10 hover:border-primary/30 flex-shrink-0"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               </div>
               
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Base Token</p>
-                <p className="text-foreground font-medium">{entity.baseToken}</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">Base Token</p>
+                <p className="text-sm font-semibold text-foreground">{entity.baseToken}</p>
               </div>
               
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Balance</p>
-                <div className="flex items-center gap-3">
-                  <p className="text-3xl font-bold text-foreground">
-                    {entity.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                  <span className="text-lg text-muted-foreground">{entity.baseToken}</span>
-                </div>
+              <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  <strong className="text-foreground">Note:</strong> Fund this wallet from your preferred Avalanche wallet. 
+                  Balances are updated when you click 'Refresh Balance'.
+                </p>
               </div>
-              
-              <Button variant="outline" onClick={refreshBalance} disabled={refreshingBalance}>
-                {refreshingBalance ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4" />
-                )}
-                Refresh Balance
-              </Button>
-              
-              <p className="text-xs text-muted-foreground">
-                Fund this wallet from your preferred Avalanche wallet. Balances are updated when you click 'Refresh Balance'.
-              </p>
             </div>
           </div>
           
@@ -176,10 +228,10 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
       </div>
 
       {/* Transaction History */}
-      <div className="glass-card p-5">
-        <h3 className="font-semibold text-foreground mb-4">Transaction History</h3>
+      <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all">
+        <h3 className="text-sm sm:text-base font-bold text-foreground mb-3 sm:mb-4">Transaction History</h3>
         <TransactionHistory transactions={transactions} loading={loadingTransactions} />
       </div>
-    </div>
+    </motion.div>
   );
 }
