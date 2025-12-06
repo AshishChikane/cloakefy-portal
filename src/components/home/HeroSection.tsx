@@ -1,6 +1,13 @@
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, useInView } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ExternalLink, Shield, Zap, CheckCircle2 } from 'lucide-react';
+import { ParticleField } from '@/components/ui/ParticleField';
+import { GradientOrbs } from '@/components/ui/GradientOrbs';
+import { TypewriterText } from '@/components/ui/TypewriterText';
+import { TiltCard } from '@/components/ui/TiltCard';
+import { MagneticButton } from '@/components/ui/MagneticButton';
+import { ArrowRight, ExternalLink, Shield, Zap, CheckCircle2, Sparkles } from 'lucide-react';
 
 const flowSteps = [
   'Request payload received',
@@ -12,74 +19,241 @@ const flowSteps = [
   'Recipients receive encrypted payments',
 ];
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6 },
+  },
+};
+
+const stepVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay: i * 0.1,
+      duration: 0.5,
+    },
+  }),
+};
+
 export function HeroSection() {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '-100px' });
+
   return (
-    <section className="relative overflow-hidden">
-      {/* Background effects */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
-      <div className="absolute top-20 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
+    <section ref={ref} className="relative min-h-screen overflow-hidden flex items-center">
+      {/* Background layers */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-card/50" />
+      <ParticleField />
+      <GradientOrbs />
       
-      <div className="relative max-w-6xl mx-auto px-4 py-20 md:py-32">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      {/* Grid pattern overlay */}
+      <div 
+        className="absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `linear-gradient(hsl(var(--primary)) 1px, transparent 1px),
+                           linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }}
+      />
+      
+      <div className="relative max-w-6xl mx-auto px-4 py-20 md:py-32 w-full">
+        <motion.div 
+          className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center"
+          variants={containerVariants}
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+        >
           {/* Left content */}
-          <div className="space-y-8 animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
-              <Shield className="w-4 h-4 text-primary" />
+          <div className="space-y-8">
+            <motion.div 
+              variants={itemVariants}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm"
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+              >
+                <Sparkles className="w-4 h-4 text-primary" />
+              </motion.div>
               <span className="text-sm text-primary font-medium">Powered by x402 Settlement</span>
-            </div>
+            </motion.div>
             
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-              Encrypted crypto distributions{' '}
-              <span className="gradient-text">made simple.</span>
-            </h1>
+            <motion.h1 
+              variants={itemVariants}
+              className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-[1.1] tracking-tight"
+            >
+              Encrypted crypto{' '}
+              <br className="hidden sm:block" />
+              <span className="relative">
+                <span className="gradient-text">
+                  <TypewriterText 
+                    words={['distributions', 'payments', 'transfers', 'settlements']} 
+                  />
+                </span>
+              </span>
+              <br />
+              <span className="text-muted-foreground">made simple.</span>
+            </motion.h1>
             
-            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
-              Today, Web3 organizations, DAOs, and DeFi protocols face complexity when distributing 
-              encrypted payments at scale. Payrolls, contributor rewards, and institutional settlements 
-              often involve manual operations, multi-wallet errors, and privacy risks.
-            </p>
+            <motion.p 
+              variants={itemVariants}
+              className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl"
+            >
+              Web3 organizations face complexity when distributing encrypted payments at scale. 
+              Cloakefy automates privacy-preserving multi-party payments with one API.
+            </motion.p>
             
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button asChild variant="hero" size="lg">
-                <Link to="/platform">
-                  Open Tooling Platform
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="heroOutline" size="lg">
-                <Link to="/docs">
-                  View API & SDK Docs
-                  <ExternalLink className="w-4 h-4" />
-                </Link>
-              </Button>
-            </div>
+            <motion.div 
+              variants={itemVariants}
+              className="flex flex-col sm:flex-row gap-4"
+            >
+              <MagneticButton>
+                <Button asChild variant="hero" size="lg" className="w-full sm:w-auto group">
+                  <Link to="/platform">
+                    Open Tooling Platform
+                    <motion.span
+                      className="inline-block"
+                      animate={{ x: [0, 4, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                    </motion.span>
+                  </Link>
+                </Button>
+              </MagneticButton>
+              <MagneticButton>
+                <Button asChild variant="heroOutline" size="lg" className="w-full sm:w-auto">
+                  <Link to="/docs">
+                    View API & SDK Docs
+                    <ExternalLink className="w-4 h-4" />
+                  </Link>
+                </Button>
+              </MagneticButton>
+            </motion.div>
+            
+            {/* Stats */}
+            <motion.div 
+              variants={itemVariants}
+              className="flex flex-wrap gap-8 pt-4"
+            >
+              {[
+                { value: '0.1%', label: 'Fee Rate' },
+                { value: '<2s', label: 'Settlement' },
+                { value: '100%', label: 'Encrypted' },
+              ].map((stat, i) => (
+                <div key={i} className="text-center sm:text-left">
+                  <motion.div 
+                    className="text-2xl md:text-3xl font-bold gradient-text"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5 + i * 0.1, duration: 0.5 }}
+                  >
+                    {stat.value}
+                  </motion.div>
+                  <div className="text-sm text-muted-foreground">{stat.label}</div>
+                </div>
+              ))}
+            </motion.div>
           </div>
           
           {/* Right content - Flow diagram */}
-          <div className="lg:pl-8 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <div className="glass-card p-6 md:p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-primary" />
-                </div>
-                <h3 className="font-semibold text-lg text-foreground">x402 Settlement Flow</h3>
-              </div>
-              
-              <div className="space-y-3">
-                {flowSteps.map((step, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
+          <motion.div variants={itemVariants} className="lg:pl-8">
+            <TiltCard className="w-full">
+              <div className="glass-card p-6 md:p-8 relative overflow-hidden">
+                {/* Animated border gradient */}
+                <motion.div
+                  className="absolute inset-0 rounded-xl opacity-50"
+                  style={{
+                    background: 'linear-gradient(90deg, transparent, hsl(var(--primary) / 0.3), transparent)',
+                    backgroundSize: '200% 100%',
+                  }}
+                  animate={{
+                    backgroundPosition: ['200% 0', '-200% 0'],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: 'linear',
+                  }}
+                />
+                
+                <div className="relative">
+                  <div className="flex items-center gap-3 mb-6">
+                    <motion.div 
+                      className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center"
+                      animate={{ 
+                        boxShadow: ['0 0 0 0 hsl(var(--primary) / 0.4)', '0 0 0 10px hsl(var(--primary) / 0)', '0 0 0 0 hsl(var(--primary) / 0)']
+                      }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <Zap className="w-6 h-6 text-primary" />
+                    </motion.div>
+                    <div>
+                      <h3 className="font-semibold text-lg text-foreground">x402 Settlement Flow</h3>
+                      <p className="text-xs text-muted-foreground">Real-time encrypted processing</p>
                     </div>
-                    <span className="text-sm text-muted-foreground">{step}</span>
                   </div>
-                ))}
+                  
+                  <div className="space-y-3">
+                    {flowSteps.map((step, index) => (
+                      <motion.div 
+                        key={index} 
+                        className="flex items-start gap-3 group"
+                        custom={index}
+                        variants={stepVariants}
+                        initial="hidden"
+                        animate={isInView ? 'visible' : 'hidden'}
+                        whileHover={{ x: 5 }}
+                      >
+                        <motion.div 
+                          className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center mt-0.5 group-hover:bg-primary/40 transition-colors"
+                          whileHover={{ scale: 1.2 }}
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-primary" />
+                        </motion.div>
+                        <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                          {step}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
+            </TiltCard>
+          </motion.div>
+        </motion.div>
       </div>
+      
+      {/* Scroll indicator */}
+      <motion.div 
+        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        animate={{ y: [0, 10, 0] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        <div className="w-6 h-10 rounded-full border-2 border-muted-foreground/30 flex items-start justify-center p-2">
+          <motion.div 
+            className="w-1.5 h-1.5 rounded-full bg-primary"
+            animate={{ y: [0, 12, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
+        </div>
+      </motion.div>
     </section>
   );
 }
