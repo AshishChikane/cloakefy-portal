@@ -4,7 +4,7 @@ export function OverviewSection() {
       <div>
         <h1 className="text-3xl font-bold text-foreground mb-4">API Overview</h1>
         <p className="text-lg text-muted-foreground leading-relaxed">
-          Cloakefy delivers a unified, secure, and automated framework for encrypted crypto distributions. 
+          eX402 delivers a unified, secure, and automated framework for encrypted crypto distributions. 
           By integrating privacy-preserving x402 settlement and eERC encryption on Avalanche, it simplifies 
           how Web3 organizations handle multi-recipient payments.
         </p>
@@ -35,7 +35,7 @@ export function OverviewSection() {
       <div className="glass-card p-6 space-y-4">
         <h2 className="text-xl font-semibold text-foreground">Base URL</h2>
         <code className="block text-sm bg-secondary/50 p-3 rounded-lg text-foreground">
-          https://api.cloakefy.io/v1
+          https://api.eX402.io/v1
         </code>
       </div>
       

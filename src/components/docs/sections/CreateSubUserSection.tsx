@@ -11,7 +11,7 @@ export function CreateSubUserSection() {
     { name: 'allocation', type: 'number', required: false, description: 'Allocation amount or percentage' },
   ];
 
-  const curlExample = `curl -X POST https://api.cloakefy.io/v1/entities/ent_abc123/sub-users \\
+  const curlExample = `curl -X POST https://api.eX402.io/v1/entities/ent_abc123/sub-users \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -23,7 +23,7 @@ export function CreateSubUserSection() {
   }'`;
 
   const jsExample = `const response = await fetch(
-  'https://api.cloakefy.io/v1/entities/ent_abc123/sub-users',
+  'https://api.eX402.io/v1/entities/ent_abc123/sub-users',
   {
     method: 'POST',
     headers: {

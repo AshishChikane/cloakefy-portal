@@ -9,7 +9,7 @@ export function CreateEntitySection() {
     { name: 'baseToken', type: 'string', required: true, description: 'Base token: eAVAX, eUSDC, or eUSDT' },
   ];
 
-  const curlExample = `curl -X POST https://api.cloakefy.io/v1/entities \\
+  const curlExample = `curl -X POST https://api.eX402.io/v1/entities \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -18,7 +18,7 @@ export function CreateEntitySection() {
     "baseToken": "eAVAX"
   }'`;
 
-  const jsExample = `const response = await fetch('https://api.cloakefy.io/v1/entities', {
+  const jsExample = `const response = await fetch('https://api.eX402.io/v1/entities', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer YOUR_API_KEY',

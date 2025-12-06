@@ -2,11 +2,11 @@ import { EndpointBox } from '../EndpointBox';
 import { CodeBlock } from '../CodeBlock';
 
 export function GetBalanceSection() {
-  const curlExample = `curl -X GET https://api.cloakefy.io/v1/entities/ent_abc123/balance \\
+  const curlExample = `curl -X GET https://api.eX402.io/v1/entities/ent_abc123/balance \\
   -H "Authorization: Bearer YOUR_API_KEY"`;
 
   const jsExample = `const response = await fetch(
-  'https://api.cloakefy.io/v1/entities/ent_abc123/balance',
+  'https://api.eX402.io/v1/entities/ent_abc123/balance',
   {
     headers: {
       'Authorization': 'Bearer YOUR_API_KEY',

@@ -93,7 +93,7 @@ export function SolutionSection() {
             variants={itemVariants}
             className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-6"
           >
-            The Cloakefy{' '}
+            The eX402{' '}
             <span className="gradient-text">Solution</span>
           </motion.h2>
           

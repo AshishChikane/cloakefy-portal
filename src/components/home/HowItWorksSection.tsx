@@ -12,7 +12,7 @@ const steps = [
   {
     icon: Calculator,
     title: 'Fee Calculation',
-    description: 'Cloakefy validates & calculates fee (0.1%)',
+    description: 'eX402 validates & calculates fee (0.1%)',
     color: 'from-cyan-500 to-teal-500',
   },
   {

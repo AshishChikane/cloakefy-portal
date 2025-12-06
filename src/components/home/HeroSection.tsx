@@ -116,7 +116,7 @@ export function HeroSection() {
               className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl"
             >
               Web3 organizations face complexity when distributing encrypted payments at scale. 
-              Cloakefy automates privacy-preserving multi-party payments with one API.
+              eX402 automates privacy-preserving multi-party payments with one API.
             </motion.p>
             
             <motion.div 

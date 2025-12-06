@@ -1,11 +1,11 @@
 import { CodeBlock } from '../CodeBlock';
 
 export function AuthenticationSection() {
-  const curlExample = `curl -X GET https://api.cloakefy.io/v1/entities \\
+  const curlExample = `curl -X GET https://api.eX402.io/v1/entities \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json"`;
 
-  const jsExample = `const response = await fetch('https://api.cloakefy.io/v1/entities', {
+  const jsExample = `const response = await fetch('https://api.eX402.io/v1/entities', {
   method: 'GET',
   headers: {
     'Authorization': 'Bearer YOUR_API_KEY',
@@ -28,7 +28,7 @@ const data = await response.json();`;
       <div className="glass-card p-6 space-y-4">
         <h2 className="text-xl font-semibold text-foreground">API Key</h2>
         <p className="text-muted-foreground">
-          You can obtain your API key from the Cloakefy dashboard under Settings → API Keys.
+          You can obtain your API key from the eX402 dashboard under Settings → API Keys.
         </p>
         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
           <p className="text-sm text-yellow-400">

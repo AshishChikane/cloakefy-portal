@@ -1,14 +1,14 @@
 import { CodeBlock } from '../CodeBlock';
 
 export function SDKSection() {
-  const installCode = `npm install @cloakefy/sdk
+  const installCode = `npm install @eX402/sdk
 # or
-yarn add @cloakefy/sdk`;
+yarn add @eX402/sdk`;
 
-  const initCode = `import { CloakefyClient } from '@cloakefy/sdk';
+  const initCode = `import { eX402Client } from '@eX402/sdk';
 
-const client = new CloakefyClient({
-  apiKey: process.env.CLOAKEFY_API_KEY,
+const client = new eX402Client({
+  apiKey: process.env.eX402_API_KEY,
 });`;
 
   const usageExample = `// Create an entity
@@ -42,7 +42,7 @@ console.log('Transfer completed:', transfer.txHash);`;
   CreateEntityRequest,
   CreateSubUserRequest,
   TransferRequest,
-} from '@cloakefy/sdk';
+} from '@eX402/sdk';
 
 // Full TypeScript support
 const entity: Entity = await client.entities.get('ent_abc123');`;
@@ -52,7 +52,7 @@ const entity: Entity = await client.entities.get('ent_abc123');`;
       <div>
         <h1 className="text-3xl font-bold text-foreground mb-4">SDK Usage</h1>
         <p className="text-muted-foreground">
-          Use our JavaScript/TypeScript SDK for easier integration with Cloakefy.
+          Use our JavaScript/TypeScript SDK for easier integration with eX402.
         </p>
       </div>
       

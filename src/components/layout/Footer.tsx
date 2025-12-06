@@ -9,7 +9,7 @@ export function Footer() {
             <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">C</span>
             </div>
-            <span className="font-medium text-foreground">Cloakefy</span>
+            <span className="font-medium text-foreground">eX402</span>
           </div>
           
           <p className="text-sm text-muted-foreground text-center md:text-left">

@@ -10,7 +10,7 @@ export function CreateTransferSection() {
     { name: 'token', type: 'string', required: true, description: 'Token type: eAVAX, eUSDC, or eUSDT' },
   ];
 
-  const curlExample = `curl -X POST https://api.cloakefy.io/v1/transfers \\
+  const curlExample = `curl -X POST https://api.eX402.io/v1/transfers \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -20,7 +20,7 @@ export function CreateTransferSection() {
     "token": "eAVAX"
   }'`;
 
-  const jsExample = `const response = await fetch('https://api.cloakefy.io/v1/transfers', {
+  const jsExample = `const response = await fetch('https://api.eX402.io/v1/transfers', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer YOUR_API_KEY',

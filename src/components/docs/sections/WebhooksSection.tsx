@@ -20,7 +20,7 @@ export function WebhooksSection() {
       <div>
         <h1 className="text-3xl font-bold text-foreground mb-4">Webhooks</h1>
         <p className="text-muted-foreground">
-          Receive real-time notifications about events in your Cloakefy account.
+          Receive real-time notifications about events in your eX402 account.
         </p>
       </div>
       

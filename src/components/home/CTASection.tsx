@@ -95,7 +95,7 @@ export function CTASection() {
               animate={isInView ? { opacity: 1 } : {}}
               transition={{ delay: 0.3 }}
             >
-              Join organizations already using Cloakefy for secure, compliant crypto distributions on Avalanche.
+              Join organizations already using eX402 for secure, compliant crypto distributions on Avalanche.
             </motion.p>
             
             <motion.div 
