@@ -16,7 +16,7 @@ interface EntityDetailProps {
 }
 
 export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailProps) {
-  const [subUsers, setSubUsers] = useState<SubUser[]>([]);
+  const [subUsers, setSubUsers] = useState([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingSubUsers, setLoadingSubUsers] = useState(true);
   const [loadingTransactions, setLoadingTransactions] = useState(true);
@@ -63,8 +63,12 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
       const newUser = await createSubUser(entity.id, data);
       setSubUsers([...subUsers, newUser]);
       toast.success('Sub user added successfully');
-    } catch (error) {
-      toast.error('Failed to add sub user');
+      // Reload sub-users to get the latest data from API
+      const updatedSubUsers = await getSubUsers(entity.id);
+      setSubUsers(updatedSubUsers);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to add sub user';
+      toast.error(errorMessage);
       throw error;
     }
   };

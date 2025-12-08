@@ -123,7 +123,7 @@ export function HeroSection() {
               variants={itemVariants}
               className="flex flex-col sm:flex-row gap-4"
             >
-              <MagneticButton>
+              {/* <MagneticButton> */}
                 <Button asChild variant="hero" size="lg" className="w-full sm:w-auto group">
                   <Link to="/platform">
                     Open Tooling Platform
@@ -136,15 +136,15 @@ export function HeroSection() {
                     </motion.span>
                   </Link>
                 </Button>
-              </MagneticButton>
-              <MagneticButton>
+              {/* </MagneticButton> */}
+              {/* <MagneticButton> */}
                 <Button asChild variant="heroOutline" size="lg" className="w-full sm:w-auto">
                   <Link to="/docs">
                     View API & SDK Docs
                     <ExternalLink className="w-4 h-4" />
                   </Link>
                 </Button>
-              </MagneticButton>
+              {/* </MagneticButton> */}
             </motion.div>
             
             {/* Stats */}

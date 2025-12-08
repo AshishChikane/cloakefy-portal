@@ -46,7 +46,7 @@ export function CTASection() {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.4 }}
           >
-            <MagneticButton>
+            {/* <MagneticButton> */}
               <Button asChild variant="hero" size="lg" className="group">
                 <Link to="/platform">
                   Launch Tooling Platform
@@ -58,15 +58,15 @@ export function CTASection() {
                   </motion.span>
                 </Link>
               </Button>
-            </MagneticButton>
-            <MagneticButton>
+            {/* </MagneticButton>
+            <MagneticButton> */}
               <Button asChild variant="heroOutline" size="lg">
                 <Link to="/docs">
                   <BookOpen className="w-4 h-4" />
                   Read the Docs
                 </Link>
               </Button>
-            </MagneticButton>
+            {/* </MagneticButton> */}
           </motion.div>
           
           <motion.div 

@@ -5,31 +5,58 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CreateEntityRequest, EntityType, BaseToken } from '@/types/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { createEntity } from '@/services/api';
 import { Loader2, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface CreateEntityModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: CreateEntityRequest) => Promise<void>;
+  onSubmit?: (data: CreateEntityRequest) => Promise<void>;
 }
 
-export function CreateEntityModal({ open, onOpenChange, onSubmit }: CreateEntityModalProps) {
+export function CreateEntityModal({ open, onOpenChange, onSubmit: onSubmitCallback }: CreateEntityModalProps) {
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [type, setType] = useState<EntityType>('DAO');
-  const [baseToken, setBaseToken] = useState<BaseToken>('eAVAX');
+  const [baseToken, setBaseToken] = useState<BaseToken>('eUSDC');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      toast.error('Please enter entity name');
+      return;
+    }
+
+    // const emailId = user?.email;
+    const emailId = 'ashishc0046@gmail.com'
+    if (!emailId) {
+      toast.error('User email not found. Please sign in again.');
+      return;
+    }
     
     setLoading(true);
     try {
-      await onSubmit({ name, type, baseToken });
+      // Call API function from api.ts to create entity
+      await createEntity({ name, type, baseToken }, emailId);
+      
+      // Call onSubmit callback if provided - this will refresh entities list in parent
+      if (onSubmitCallback) {
+        await onSubmitCallback({ name, type, baseToken });
+      }
+      
+      // Reset form
       setName('');
       setType('DAO');
-      setBaseToken('eAVAX');
+      setBaseToken('eUSDC');
       onOpenChange(false);
+      toast.success('Entity created successfully');
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to create entity';
+      toast.error(errorMessage);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -85,8 +112,8 @@ export function CreateEntityModal({ open, onOpenChange, onSubmit }: CreateEntity
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
-                <SelectItem value="eAVAX">eAVAX</SelectItem>
                 <SelectItem value="eUSDC">eUSDC</SelectItem>
+                <SelectItem value="eAVAX">eAVAX</SelectItem>
                 <SelectItem value="eUSDT">eUSDT</SelectItem>
               </SelectContent>
             </Select>

@@ -3,10 +3,11 @@ import { Layout } from '@/components/layout/Layout';
 import { PlatformSidebar } from '@/components/platform/PlatformSidebar';
 import { EntityCard } from '@/components/platform/EntityCard';
 import { CreateEntityModal } from '@/components/platform/CreateEntityModal';
-import { EntityDetail } from '@/components/platform/EntityDetail';
 import { TransactionHistory } from '@/components/platform/TransactionHistory';
 import { DashboardOverview } from '@/components/platform/DashboardOverview';
 import { DashboardBackground } from '@/components/ui/DashboardBackground';
+import { GoogleSignInModal } from '@/components/auth/GoogleSignInModal';
+import { useAuth } from '@/contexts/AuthContext';
 import { Entity, Transaction, CreateEntityRequest } from '@/types/api';
 import { getEntities, createEntity, getTransactions } from '@/services/api';
 import { Button } from '@/components/ui/button';
@@ -15,17 +16,25 @@ import { Plus, Menu, Loader2, Building2, Sparkles, Activity } from 'lucide-react
 import { motion } from 'framer-motion';
 
 export default function Platform() {
+  const { isAuthenticated, signIn } = useAuth();
+  const [showSignInModal, setShowSignInModal] = useState(!isAuthenticated);
   const [activeTab, setActiveTab] = useState('entities');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [entities, setEntities] = useState<Entity[]>([]);
-  const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   useEffect(() => {
+    // Show sign-in modal if not authenticated
+    if (!isAuthenticated) {
+      setShowSignInModal(true);
+      return;
+    }
+    
+    // Load entities only when authenticated
     loadEntities();
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (activeTab === 'transactions' || activeTab === 'entities') {
@@ -58,31 +67,13 @@ export default function Platform() {
 
   const handleCreateEntity = async (data: CreateEntityRequest) => {
     try {
-      const newEntity = await createEntity(data);
-      setEntities([...entities, newEntity]);
-      toast.success('Entity created successfully');
+      // Reload entities to show the newly created entity
+      await loadEntities();
     } catch (error) {
-      toast.error('Failed to create entity');
-      throw error;
+      toast.error('Failed to refresh entities list');
     }
   };
-
-  const handleEntityUpdate = (updatedEntity: Entity) => {
-    setEntities(entities.map(e => e.id === updatedEntity.id ? updatedEntity : e));
-    setSelectedEntity(updatedEntity);
-  };
-
   const renderContent = () => {
-    if (selectedEntity && activeTab === 'entities') {
-      return (
-        <EntityDetail 
-          entity={selectedEntity} 
-          onBack={() => setSelectedEntity(null)}
-          onEntityUpdate={handleEntityUpdate}
-        />
-      );
-    }
-
     switch (activeTab) {
       case 'entities':
         return (
@@ -155,8 +146,7 @@ export default function Platform() {
                     transition={{ delay: index * 0.1 }}
                   >
                     <EntityCard 
-                      entity={entity} 
-                      onSelect={setSelectedEntity}
+                      entity={entity}
                     />
                   </motion.div>
                 ))}
@@ -209,6 +199,27 @@ export default function Platform() {
     }
   };
 
+  const handleSignIn = (user: { email: string; name: string; picture: string }) => {
+    signIn(user);
+    setShowSignInModal(false);
+    toast.success(`Welcome, ${user.name}!`);
+  };
+
+  // Show sign-in modal if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <Layout showFooter={false}>
+        <div className="flex min-h-[calc(100vh-4rem)] bg-gradient-to-br from-background via-background to-card/30 relative">
+          <DashboardBackground />
+          <GoogleSignInModal 
+            open={showSignInModal} 
+            onSignIn={handleSignIn}
+          />
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout showFooter={false}>
       <div className="flex min-h-[calc(100vh-4rem)] bg-gradient-to-br from-background via-background to-card/30 relative">
@@ -216,10 +227,7 @@ export default function Platform() {
         <div className="relative z-10 flex w-full">
           <PlatformSidebar 
             activeTab={activeTab}
-            onTabChange={(tab) => {
-              setActiveTab(tab);
-              setSelectedEntity(null);
-            }}
+            onTabChange={setActiveTab}
             mobileOpen={mobileMenuOpen}
             onMobileClose={() => setMobileMenuOpen(false)}
           />

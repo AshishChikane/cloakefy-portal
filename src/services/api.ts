@@ -6,6 +6,7 @@ import {
   CreateSubUserRequest, 
   TransferRequest 
 } from '@/types/api';
+import axiosInstance from '@/lib/axios.config';
 
 // Simulated delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -82,29 +83,206 @@ let mockTransactions: Transaction[] = [
   },
 ];
 
-// API functions
-export async function getEntities(): Promise<Entity[]> {
-  await delay(500);
-  return [...mockEntities];
+// API Response Types
+interface ApiEntityResponse {
+  entity_id: number;
+  email_id: string;
+  name: string;
+  entity_type: string;
+  base_token: string;
+  createdAt: string;
+  updatedAt: string;
+  wallet_address: string;
 }
 
-export async function createEntity(data: CreateEntityRequest): Promise<Entity> {
-  await delay(800);
-  const newEntity: Entity = {
-    id: String(mockEntities.length + 1),
-    name: data.name,
-    type: data.type,
-    baseToken: data.baseToken,
-    smartWalletAddress: '0x' + randomHex(40),
-    balance: 0,
+interface GetEntitiesApiResponse {
+  isSuccess: boolean;
+  result: ApiEntityResponse[];
+  message: string;
+  statusCode: number;
+}
+
+// API functions
+export async function getEntities(): Promise<Entity[]> {
+  try {
+    const response = await axiosInstance.get<GetEntitiesApiResponse>('/v1/entities');
+    
+    if (response.data.isSuccess && response.data.result) {
+      // Map API response to Entity interface
+      return response.data.result.map((apiEntity): Entity => ({
+        id: String(apiEntity.entity_id),
+        name: apiEntity.name,
+        type: apiEntity.entity_type as Entity['type'],
+        baseToken: apiEntity.base_token as Entity['baseToken'],
+        smartWalletAddress: apiEntity.wallet_address,
+        balance: 0, // Default balance, can be fetched separately if needed
+      }));
+    }
+    
+    // Fallback to mock data if API fails
+    console.warn('API response format unexpected, using mock data');
+    await delay(500);
+    return [...mockEntities];
+  } catch (error) {
+    console.error('Error fetching entities:', error);
+    // Fallback to mock data on error
+    await delay(500);
+    return [...mockEntities];
+  }
+}
+
+// API Response Types for Create Entity
+interface CreateEntityApiResponse {
+  isSuccess: boolean;
+  result: {
+    entity_id: number;
+    email_id: string;
+    name: string;
+    entity_type: string;
+    base_token: string;
+    createdAt: string;
+    updatedAt: string;
+    wallet_address?: string;
+    api_key: string;
   };
-  mockEntities.push(newEntity);
-  return newEntity;
+  message: string;
+  statusCode: number;
+}
+
+export async function createEntity(data: CreateEntityRequest, emailId: string): Promise<Entity> {
+  try {
+    const response = await axiosInstance.post<CreateEntityApiResponse>('/v1/entities', {
+      name: data.name.trim(),
+      email_id: emailId,
+      entity_type: data.type,
+      base_token: data.baseToken,
+    });
+
+    if (response.data.isSuccess && response.data.result) {
+      const apiEntity = response.data.result;
+      
+      // Store API key in localStorage
+      if (apiEntity.api_key) {
+        localStorage.setItem('api_key', apiEntity.api_key);
+      }
+
+      // Map API response to Entity interface
+      return {
+        id: String(apiEntity.entity_id),
+        name: apiEntity.name,
+        type: apiEntity.entity_type as Entity['type'],
+        baseToken: apiEntity.base_token as Entity['baseToken'],
+        smartWalletAddress: apiEntity.wallet_address || '',
+        balance: 0,
+      };
+    }
+
+    throw new Error(response.data.message || 'Failed to create entity');
+  } catch (error: any) {
+    console.error('Error creating entity:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to create entity';
+    throw new Error(errorMessage);
+  }
+}
+
+// API Response Types for Get Entity by ID
+interface WalletResponse {
+  wallet_id: number;
+  entity_id: number;
+  address: string;
+  network: string;
+  chain_id: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface WalletBalancesResponse {
+  avax?: {
+    balance: string;
+    balanceWei: string;
+  };
+  eusdc?: {
+    tokenBalance: string;
+    tokenBalanceWei: string;
+    encryptedBalance: string;
+    encryptedBalanceWei: string;
+    isRegistered: boolean;
+  };
+  eusdt?: {
+    tokenBalance: string;
+    tokenBalanceWei: string;
+    encryptedBalance: string;
+    encryptedBalanceWei: string;
+    isRegistered: boolean;
+  };
+}
+
+interface SubEntityWalletResponse {
+  wallet_id: number;
+  sub_entity_id: number;
+  address: string;
+  network: string;
+  chain_id: string;
+  createdAt: string;
+  updatedAt: string;
+  balances?: WalletBalancesResponse;
+}
+
+interface SubEntityResponse {
+  sub_entity_id: number;
+  email_id: string;
+  name: string;
+  role: string;
+  entity_id: number;
+  createdAt: string;
+  updatedAt: string;
+  wallet: SubEntityWalletResponse;
+}
+
+interface GetEntityApiResponse {
+  isSuccess: boolean;
+  result: {
+    entity_id: number;
+    email_id: string;
+    name: string;
+    entity_type: string;
+    base_token: string;
+    createdAt: string;
+    updatedAt: string;
+    wallet: WalletResponse;
+    sub_entities: SubEntityResponse[];
+  };
+  message: string;
+  statusCode: number;
 }
 
 export async function getEntity(id: string): Promise<Entity | undefined> {
-  await delay(300);
-  return mockEntities.find(e => e.id === id);
+  try {
+    const response = await axiosInstance.get<GetEntityApiResponse>(`/v1/entities/${id}`);
+    
+    if (response.data.isSuccess && response.data.result) {
+      const apiEntity = response.data.result;
+      // Map API response to Entity interface
+      return {
+        id: String(apiEntity.entity_id),
+        name: apiEntity.name,
+        type: apiEntity.entity_type as Entity['type'],
+        baseToken: apiEntity.base_token as Entity['baseToken'],
+        smartWalletAddress: apiEntity.wallet.address,
+        balance: 0, // Balance might need separate API call
+      };
+    }
+    
+    // Fallback to mock data if API fails
+    console.warn('API response format unexpected, using mock data');
+    await delay(300);
+    return mockEntities.find(e => e.id === id);
+  } catch (error) {
+    console.error('Error fetching entity:', error);
+    // Fallback to mock data on error
+    await delay(300);
+    return mockEntities.find(e => e.id === id);
+  }
 }
 
 export async function getEntityBalance(id: string): Promise<number> {
@@ -118,23 +296,117 @@ export async function getEntityBalance(id: string): Promise<number> {
 }
 
 export async function getSubUsers(entityId: string): Promise<SubUser[]> {
-  await delay(400);
-  return mockSubUsers.filter(su => su.entityId === entityId);
+  try {
+    // Get entity details which includes sub_entities
+    const entity = await getEntity(entityId);
+    if (!entity) {
+      return [];
+    }
+
+    const response = await axiosInstance.get<GetEntityApiResponse>(`/v1/entities/${entityId}`);
+    
+    if (response.data.isSuccess && response.data.result?.sub_entities) {
+      // Map sub_entities to SubUser interface
+      return response.data.result.sub_entities.map((subEntity): SubUser => {
+        const wallet = subEntity.wallet;
+        return {
+          id: String(subEntity.sub_entity_id),
+          entityId: String(subEntity.entity_id),
+          name: subEntity.name,
+          role: subEntity.role,
+          email_id: subEntity.email_id,
+          walletAddress: wallet?.address || '',
+          walletBalance: wallet?.balances ? {
+            avax: wallet.balances.avax,
+            eusdc: wallet.balances.eusdc,
+            eusdt: wallet.balances.eusdt,
+          } : undefined,
+          allocationType: undefined,
+          allocation: undefined,
+        };
+      });
+    }
+    
+    // Fallback to mock data
+    await delay(400);
+    return mockSubUsers.filter(su => su.entityId === entityId);
+  } catch (error) {
+    console.error('Error fetching sub users:', error);
+    // Fallback to mock data on error
+    await delay(400);
+    return mockSubUsers.filter(su => su.entityId === entityId);
+  }
+}
+
+// API Response Types for Create Sub Entity
+interface CreateSubEntityApiResponse {
+  isSuccess: boolean;
+  result: {
+    sub_entity_id: number;
+    email_id: string;
+    name: string;
+    role: string;
+    entity_id: number;
+    createdAt: string;
+    updatedAt: string;
+    wallet?: SubEntityWalletResponse;
+  };
+  message: string;
+  statusCode: number;
 }
 
 export async function createSubUser(entityId: string, data: CreateSubUserRequest): Promise<SubUser> {
-  await delay(600);
-  const newSubUser: SubUser = {
-    id: 'su' + (mockSubUsers.length + 1),
-    entityId,
-    name: data.name,
-    role: data.role,
-    walletAddress: data.walletAddress,
-    allocationType: data.allocationType,
-    allocation: data.allocation,
-  };
-  mockSubUsers.push(newSubUser);
-  return newSubUser;
+  try {
+    // Get API key from localStorage
+    const apiKey = localStorage.getItem('api_key');
+    
+    if (!apiKey) {
+      throw new Error('API key not found. Please create an entity first.');
+    }
+
+    // Call the API endpoint
+    const response = await axiosInstance.post<CreateSubEntityApiResponse>(
+      '/v1/sub-entities',
+      {
+        name: data.name.trim(),
+        email_id: data.email_id.trim(),
+        role: data.role.trim(),
+      },
+      {
+        headers: {
+          'x-secret-key': apiKey,
+        },
+      }
+    );
+
+    if (response.data.isSuccess && response.data.result) {
+      const apiSubEntity = response.data.result;
+      
+      // Map API response to SubUser interface
+      const wallet = apiSubEntity.wallet;
+      return {
+        id: String(apiSubEntity.sub_entity_id),
+        entityId: String(apiSubEntity.entity_id),
+        name: apiSubEntity.name,
+        role: apiSubEntity.role,
+        email_id: apiSubEntity.email_id,
+        walletAddress: wallet?.address || '',
+        walletBalance: wallet?.balances ? {
+          avax: wallet.balances.avax,
+          eusdc: wallet.balances.eusdc,
+          eusdt: wallet.balances.eusdt,
+        } : undefined,
+        allocationType: data.allocationType,
+        allocation: data.allocation,
+      };
+    }
+
+    throw new Error(response.data.message || 'Failed to create sub user');
+  } catch (error: any) {
+    console.error('Error creating sub user:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to create sub user';
+    throw new Error(errorMessage);
+  }
 }
 
 export async function createTransfer(data: TransferRequest): Promise<Transaction[]> {
@@ -190,4 +462,49 @@ export async function createTransfer(data: TransferRequest): Promise<Transaction
 export async function getTransactions(entityId: string): Promise<Transaction[]> {
   await delay(400);
   return mockTransactions.filter(tx => tx.entityId === entityId);
+}
+
+// API Response Types for Get Private Key
+interface GetPrivateKeyApiResponse {
+  isSuccess: boolean;
+  result: {
+    private_key: string;
+    sub_entity_id: number;
+  };
+  message: string;
+  statusCode: number;
+}
+
+export async function getSubUserPrivateKey(subEntityId: string): Promise<string> {
+  try {
+    // Get API key from localStorage
+    const apiKey = localStorage.getItem('api_key');
+    
+    if (!apiKey) {
+      throw new Error('API key not found. Please create an entity first.');
+    }
+
+    // Call the API endpoint
+    const response = await axiosInstance.post<GetPrivateKeyApiResponse>(
+      '/v1/facilitator/private-key',
+      {
+        sub_entity_id: Number(subEntityId),
+      },
+      {
+        headers: {
+          'x-secret-key': apiKey,
+        },
+      }
+    );
+
+    if (response.data.isSuccess && response.data.result) {
+      return response.data.result.private_key;
+    }
+
+    throw new Error(response.data.message || 'Failed to get private key');
+  } catch (error: any) {
+    console.error('Error fetching private key:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to get private key';
+    throw new Error(errorMessage);
+  }
 }

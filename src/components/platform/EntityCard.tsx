@@ -3,19 +3,20 @@ import { Button } from '@/components/ui/button';
 import { Copy, ChevronRight, Wallet, TrendingUp, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 interface EntityCardProps {
   entity: Entity;
-  onSelect: (entity: Entity) => void;
+  onSelect?: (entity: Entity) => void; // Made optional since we're using navigation
 }
 
 export function EntityCard({ entity, onSelect }: EntityCardProps) {
+  const navigate = useNavigate();
   const copyAddress = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(entity.smartWalletAddress);
     toast.success('Address copied to clipboard');
   };
-
   const shortAddress = `${entity.smartWalletAddress.slice(0, 6)}...${entity.smartWalletAddress.slice(-4)}`;
 
   return (
@@ -28,7 +29,10 @@ export function EntityCard({ entity, onSelect }: EntityCardProps) {
     >
       <div 
         className="glass-card p-3 sm:p-4 hover:border-primary/40 transition-all duration-300 cursor-pointer relative overflow-hidden"
-        onClick={() => onSelect(entity)}
+        onClick={() => {
+          navigate(`/entity/${entity.id}`);
+          onSelect?.(entity);
+        }}
       >
         {/* Gradient overlay on hover */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

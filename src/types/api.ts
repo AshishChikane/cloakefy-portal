@@ -11,12 +11,35 @@ export interface Entity {
   balance: number;
 }
 
+export interface WalletBalance {
+  avax?: {
+    balance: string;
+    balanceWei: string;
+  };
+  eusdc?: {
+    tokenBalance: string;
+    tokenBalanceWei: string;
+    encryptedBalance: string;
+    encryptedBalanceWei: string;
+    isRegistered: boolean;
+  };
+  eusdt?: {
+    tokenBalance: string;
+    tokenBalanceWei: string;
+    encryptedBalance: string;
+    encryptedBalanceWei: string;
+    isRegistered: boolean;
+  };
+}
+
 export interface SubUser {
   id: string;
   entityId: string;
   name: string;
   role: string;
+  email_id?: string;
   walletAddress: string;
+  walletBalance?: WalletBalance;
   allocationType?: 'Fixed' | 'Percentage';
   allocation?: number;
 }
@@ -53,8 +76,9 @@ export interface CreateEntityRequest {
 
 export interface CreateSubUserRequest {
   name: string;
+  email_id: string;
   role: string;
-  walletAddress: string;
+  walletAddress?: string;
   allocationType?: 'Fixed' | 'Percentage';
   allocation?: number;
 }

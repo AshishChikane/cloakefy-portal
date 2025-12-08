@@ -1,5 +1,9 @@
 import { cn } from '@/lib/utils';
-import { Building2, History, Settings, X } from 'lucide-react';
+import { Building2, History, Settings, X, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface PlatformSidebarProps {
   activeTab: string;
@@ -15,6 +19,15 @@ const navItems = [
 ];
 
 export function PlatformSidebar({ activeTab, onTabChange, mobileOpen, onMobileClose }: PlatformSidebarProps) {
+  const { signOut, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = () => {
+    signOut();
+    toast.success('Signed out successfully');
+    navigate('/');
+  };
+
   return (
     <>
       {/* Mobile overlay */}
@@ -90,9 +103,25 @@ export function PlatformSidebar({ activeTab, onTabChange, mobileOpen, onMobileCl
           })}
         </nav>
 
-        {/* Footer decoration */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-sidebar-border/50">
-          <div className="text-xs text-sidebar-foreground/40 text-center">
+        {/* User info and sign out */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-sidebar-border/50 bg-sidebar/50">
+          {user && (
+            <div className="mb-3 px-2">
+              <div className="text-xs text-sidebar-foreground/60 mb-1">Signed in as</div>
+              <div className="text-sm font-medium text-sidebar-foreground truncate">{user.name}</div>
+              <div className="text-xs text-sidebar-foreground/50 truncate">{user.email}</div>
+            </div>
+          )}
+          <Button
+            onClick={handleSignOut}
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+          <div className="text-xs text-sidebar-foreground/40 text-center mt-2">
             Powered by x402 Settlement
           </div>
         </div>
