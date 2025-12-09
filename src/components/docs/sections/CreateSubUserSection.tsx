@@ -9,8 +9,11 @@ export function CreateSubUserSection() {
     { name: 'role', type: 'string', required: false, description: 'Role or title of the sub user' },
   ];
 
-  const curlExample = `curl -X POST https://api.eX402.io/v1/sub-entities \\
+  const baseUrl = 'https://your-api-base-url.com'; // Replace with your actual API base URL
+
+  const curlExample = `curl -X POST ${baseUrl}/v1/sub-entities \\
   -H "x-secret-key: YOUR_SECRET_KEY" \\
+  -H "ngrok-skip-browser-warning: true" \\
   -H "Content-Type: application/json" \\
   -d '{
     "name": "Alice Johnson",
@@ -18,10 +21,11 @@ export function CreateSubUserSection() {
     "role": "Core Contributor"
   }'`;
 
-  const jsExample = `const response = await fetch('https://api.eX402.io/v1/sub-entities', {
+  const jsExample = `const response = await fetch('${baseUrl}/v1/sub-entities', {
   method: 'POST',
   headers: {
     'x-secret-key': 'YOUR_SECRET_KEY',
+    'ngrok-skip-browser-warning': 'true',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
@@ -31,7 +35,8 @@ export function CreateSubUserSection() {
   }),
 });
 
-const result = await response.json();`;
+const result = await response.json();
+// Response includes wallet address and initial balances`;
 
   const responseExample = `{
   "isSuccess": true,

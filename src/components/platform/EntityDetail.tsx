@@ -28,6 +28,7 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
   useEffect(() => {
     loadData();
     loadEntityData();
+    // let jwt = localStorage.getItem('platform_user');
     localStorage.setItem('api_key', 'd9f7643f93827e7224d76fabfac42b430500e4d9aa0ab7a61597900c5a6a88a5');
   }, [entity.id]);
 

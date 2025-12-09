@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { X, FileText, Key, Building2, Wallet, Users, UserPlus, Send, Webhook, Code } from 'lucide-react';
+import { X, FileText, Key, Building2, Wallet, Users, UserPlus, Send, Webhook, Code, ArrowDownCircle, ArrowUpCircle, Lock, Mail } from 'lucide-react';
 
 interface DocsSidebarProps {
   activeSection: string;
@@ -16,6 +16,10 @@ const docSections = [
   { id: 'list-sub-users', label: 'List Sub Users', icon: Users, description: 'View recipients' },
   { id: 'create-sub-user', label: 'Create Sub User', icon: UserPlus, description: 'Add recipients' },
   { id: 'create-transfer', label: 'Create Distribution', icon: Send, description: 'Send payments' },
+  { id: 'deposit', label: 'Deposit Funds', icon: ArrowDownCircle, description: 'Deposit USDC' },
+  { id: 'withdraw', label: 'Withdraw Funds', icon: ArrowUpCircle, description: 'Withdraw tokens' },
+  { id: 'get-private-key', label: 'Get Private Key', icon: Lock, description: 'Export wallet key' },
+  { id: 'resend-verification', label: 'Resend Verification', icon: Mail, description: 'Verify email' },
   { id: 'webhooks', label: 'Webhooks', icon: Webhook, description: 'Event notifications' },
   { id: 'sdk', label: 'SDK Usage', icon: Code, description: 'Developer tools' },
 ];

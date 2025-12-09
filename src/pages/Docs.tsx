@@ -9,6 +9,10 @@ import { GetBalanceSection } from '@/components/docs/sections/GetBalanceSection'
 import { ListSubUsersSection } from '@/components/docs/sections/ListSubUsersSection';
 import { CreateSubUserSection } from '@/components/docs/sections/CreateSubUserSection';
 import { CreateTransferSection } from '@/components/docs/sections/CreateTransferSection';
+import { DepositSection } from '@/components/docs/sections/DepositSection';
+import { WithdrawSection } from '@/components/docs/sections/WithdrawSection';
+import { GetPrivateKeySection } from '@/components/docs/sections/GetPrivateKeySection';
+import { ResendVerificationSection } from '@/components/docs/sections/ResendVerificationSection';
 import { WebhooksSection } from '@/components/docs/sections/WebhooksSection';
 import { SDKSection } from '@/components/docs/sections/SDKSection';
 import { Menu } from 'lucide-react';
@@ -21,6 +25,10 @@ const sections: Record<string, React.ComponentType> = {
   'list-sub-users': ListSubUsersSection,
   'create-sub-user': CreateSubUserSection,
   'create-transfer': CreateTransferSection,
+  'deposit': DepositSection,
+  'withdraw': WithdrawSection,
+  'get-private-key': GetPrivateKeySection,
+  'resend-verification': ResendVerificationSection,
   'webhooks': WebhooksSection,
   'sdk': SDKSection,
 };

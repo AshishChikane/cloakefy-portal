@@ -2,19 +2,24 @@ import { EndpointBox } from '../EndpointBox';
 import { CodeBlock } from '../CodeBlock';
 
 export function GetBalanceSection() {
-  const curlExample = `curl -X GET https://api.eX402.io/v1/entities/1 \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
-  -H "X-User-Email: user@example.com"`;
+  const baseUrl = 'https://your-api-base-url.com'; // Replace with your actual API base URL
 
-  const jsExample = `const response = await fetch('https://api.eX402.io/v1/entities/1', {
+  const curlExample = `curl -X GET ${baseUrl}/v1/entities/1 \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-User-Email: user@example.com" \\
+  -H "ngrok-skip-browser-warning: true"`;
+
+  const jsExample = `const response = await fetch('${baseUrl}/v1/entities/1', {
   method: 'GET',
   headers: {
     'Authorization': 'Bearer YOUR_TOKEN',
     'X-User-Email': 'user@example.com',
+    'ngrok-skip-browser-warning': 'true',
   },
 });
 
-const result = await response.json();`;
+const result = await response.json();
+// Access balances: result.result.wallet.balances`;
 
   const responseExample = `{
   "isSuccess": true,
@@ -88,8 +93,12 @@ const result = await response.json();`;
           The response includes wallet balances in the <code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">wallet.balances</code> object:
         </p>
         <ul className="text-xs sm:text-sm text-muted-foreground space-y-1 mb-3 list-disc list-inside">
-          <li><code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">tokenBalance</code> - USDC/USDT balance (regular token)</li>
-          <li><code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">encryptedBalance</code> - eUSDC/eUSDT balance (encrypted token)</li>
+          <li><code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">avax.balance</code> - AVAX balance</li>
+          <li><code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">eusdc.tokenBalance</code> - USDC balance (regular token)</li>
+          <li><code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">eusdc.encryptedBalance</code> - eUSDC balance (encrypted token)</li>
+          <li><code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">eusdc.isRegistered</code> - Registration status for eUSDC</li>
+          <li><code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">eusdt.tokenBalance</code> - USDT balance (regular token)</li>
+          <li><code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">eusdt.encryptedBalance</code> - eUSDT balance (encrypted token)</li>
         </ul>
         <CodeBlock code={responseExample} title="200 OK" />
       </div>

@@ -2,20 +2,25 @@ import { EndpointBox } from '../EndpointBox';
 import { CodeBlock } from '../CodeBlock';
 
 export function ListSubUsersSection() {
-  const curlExample = `curl -X GET https://api.eX402.io/v1/entities/1 \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
-  -H "X-User-Email: user@example.com"`;
+  const baseUrl = 'https://your-api-base-url.com'; // Replace with your actual API base URL
 
-  const jsExample = `const response = await fetch('https://api.eX402.io/v1/entities/1', {
+  const curlExample = `curl -X GET ${baseUrl}/v1/entities/1 \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "X-User-Email: user@example.com" \\
+  -H "ngrok-skip-browser-warning: true"`;
+
+  const jsExample = `const response = await fetch('${baseUrl}/v1/entities/1', {
   method: 'GET',
   headers: {
     'Authorization': 'Bearer YOUR_TOKEN',
     'X-User-Email': 'user@example.com',
+    'ngrok-skip-browser-warning': 'true',
   },
 });
 
 const result = await response.json();
-// Sub users are in result.result.sub_entities array`;
+// Sub users are in result.result.sub_entities array
+// Each sub_entity includes wallet address and balances`;
 
   const responseExample = `{
   "isSuccess": true,

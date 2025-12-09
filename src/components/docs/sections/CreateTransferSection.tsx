@@ -11,8 +11,11 @@ export function CreateTransferSection() {
     { name: 'network', type: 'string', required: true, description: 'Network name: "avalanche-fuji"' },
   ];
 
-  const curlExample = `curl -X POST https://api.eX402.io/v1/facilitator/run \\
+  const baseUrl = 'https://your-api-base-url.com'; // Replace with your actual API base URL
+
+  const curlExample = `curl -X POST ${baseUrl}/v1/facilitator/run \\
   -H "x-secret-key: YOUR_SECRET_KEY" \\
+  -H "ngrok-skip-browser-warning: true" \\
   -H "Content-Type: application/json" \\
   -d '{
     "entity_id": 3,
@@ -29,10 +32,11 @@ export function CreateTransferSection() {
     "network": "avalanche-fuji"
   }'`;
 
-  const jsExample = `const response = await fetch('https://api.eX402.io/v1/facilitator/run', {
+  const jsExample = `const response = await fetch('${baseUrl}/v1/facilitator/run', {
   method: 'POST',
   headers: {
     'x-secret-key': 'YOUR_SECRET_KEY',
+    'ngrok-skip-browser-warning': 'true',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
@@ -64,15 +68,19 @@ const result = await response.json();`;
 }`;
 
   const paymentFlowExample = `// First call - Check if payment is needed
-const firstResponse = await fetch('https://api.eX402.io/v1/facilitator/run', {
+const firstResponse = await fetch('${baseUrl}/v1/facilitator/run', {
   method: 'POST',
   headers: {
     'x-secret-key': 'YOUR_SECRET_KEY',
+    'ngrok-skip-browser-warning': 'true',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
     entity_id: 3,
-    recipients: [...],
+    recipients: [
+      { address: '0xA86F33Ee644CC7C7a7890698786799062d36fef4', amount: '0.1' },
+      { address: '0xe56fe1F7EE2C1454a250e29AefB4BAc192f00225', amount: '0.5' }
+    ],
     network: 'avalanche-fuji',
   }),
 });
@@ -81,16 +89,20 @@ const firstResult = await firstResponse.json();
 
 // If statusCode is 402, make second call with x-payment header
 if (firstResult.statusCode === 402) {
-  const paymentResponse = await fetch('https://api.eX402.io/v1/facilitator/run', {
+  const paymentResponse = await fetch('${baseUrl}/v1/facilitator/run', {
     method: 'POST',
     headers: {
       'x-secret-key': 'YOUR_SECRET_KEY',
       'x-payment': 'true',
+      'ngrok-skip-browser-warning': 'true',
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       entity_id: 3,
-      recipients: [...],
+      recipients: [
+        { address: '0xA86F33Ee644CC7C7a7890698786799062d36fef4', amount: '0.1' },
+        { address: '0xe56fe1F7EE2C1454a250e29AefB4BAc192f00225', amount: '0.5' }
+      ],
       network: 'avalanche-fuji',
     }),
   });

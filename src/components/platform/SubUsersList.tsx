@@ -5,10 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, User, Loader2, Copy, Wallet, Key, Eye, EyeOff, Check } from 'lucide-react';
+import { Plus, User, Loader2, Copy, Wallet, Key, Eye, EyeOff, Check, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { getSubUserPrivateKey } from '@/services/api';
+import { getSubUserPrivateKey, resendSubEntityVerification } from '@/services/api';
 
 interface SubUsersListProps {
   subUsers: SubUser[];
@@ -33,7 +33,7 @@ export function SubUsersList({ subUsers, loading, onAddSubUser }: SubUsersListPr
   const [loadingPrivateKey, setLoadingPrivateKey] = useState(false);
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [copied, setCopied] = useState(false);
-
+  const [verifyingSubUserId, setVerifyingSubUserId] = useState<string | null>(null);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email_id) return;
@@ -92,6 +92,18 @@ export function SubUsersList({ subUsers, loading, onAddSubUser }: SubUsersListPr
   const maskPrivateKey = (key: string) => {
     if (key.length <= 20) return '•'.repeat(key.length);
     return `${key.slice(0, 6)}${'•'.repeat(key.length - 12)}${key.slice(-6)}`;
+  };
+
+  const handleResendVerification = async (subUserId: string) => {
+    setVerifyingSubUserId(subUserId);
+    try {
+      await resendSubEntityVerification(subUserId);
+      toast.success('Verification email sent successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send verification email');
+    } finally {
+      setVerifyingSubUserId(null);
+    }
   };
   return (
     <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all flex flex-col h-[470px] border-border">
@@ -159,14 +171,14 @@ export function SubUsersList({ subUsers, loading, onAddSubUser }: SubUsersListPr
                         </button>
                       </>
                     )}
-                    <button
+                    {/* <button
                       onClick={() => handleExportPrivateKey(user.id)}
                       className="ml-1 px-2 py-0.5 text-xs font-medium text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10 rounded-md border border-yellow-500/20 hover:border-yellow-500/40 transition-all opacity-100 sm:opacity-0 group-hover:opacity-100 flex items-center gap-1"
                       title="Export Private Key"
                     >
                       <Key className="w-3 h-3" />
                       <span>Export Key</span>
-                    </button>
+                    </button> */}
                   </div>
                   {/* Wallet Balances */}
                   {user.walletBalance && (
@@ -189,6 +201,21 @@ export function SubUsersList({ subUsers, loading, onAddSubUser }: SubUsersListPr
                             <span className="text-xs text-blue-400/70">
                               ({parseFloat(user.walletBalance.eusdc.tokenBalance).toFixed(2)} USDC)
                             </span>
+                          )}
+                          {!user.walletBalance.eusdc.isRegistered && (
+                            <button
+                              onClick={() => handleResendVerification(user.id)}
+                              disabled={verifyingSubUserId === user.id}
+                              className="ml-1 px-1.5 py-0.5 text-xs font-medium text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 rounded border border-orange-500/20 hover:border-orange-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                              title="Resend Verification Email"
+                            >
+                              {verifyingSubUserId === user.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Mail className="w-3 h-3" />
+                              )}
+                              <span>Verify</span>
+                            </button>
                           )}
                         </div>
                       )}

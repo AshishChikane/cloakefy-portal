@@ -10,9 +10,12 @@ export function CreateEntitySection() {
     { name: 'base_token', type: 'string', required: true, description: 'Base token: eAVAX, eUSDC, or eUSDT' },
   ];
 
-  const curlExample = `curl -X POST https://api.eX402.io/v1/entities \\
+  const baseUrl = 'https://your-api-base-url.com'; // Replace with your actual API base URL
+
+  const curlExample = `curl -X POST ${baseUrl}/v1/entities \\
   -H "Authorization: Bearer YOUR_TOKEN" \\
   -H "X-User-Email: user@example.com" \\
+  -H "ngrok-skip-browser-warning: true" \\
   -H "Content-Type: application/json" \\
   -d '{
     "name": "My DAO Treasury",
@@ -21,22 +24,24 @@ export function CreateEntitySection() {
     "base_token": "eUSDC"
   }'`;
 
-  const jsExample = `const response = await fetch('https://api.eX402.io/v1/entities', {
+  const jsExample = `const response = await fetch('${baseUrl}/v1/entities', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer YOUR_TOKEN',
     'X-User-Email': 'user@example.com',
+    'ngrok-skip-browser-warning': 'true',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
     name: 'My DAO Treasury',
-    email_id: 'user@example.com',
+    email_id: 'user@example.com', // Usually handled automatically from auth
     entity_type: 'DAO',
     base_token: 'eUSDC',
   }),
 });
 
-const result = await response.json();`;
+const result = await response.json();
+// Store result.result.api_key as your x-secret-key`;
 
   const responseExample = `{
   "isSuccess": true,
@@ -61,7 +66,8 @@ const result = await response.json();`;
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 sm:mb-4">Create Entity</h1>
         <p className="text-sm sm:text-base text-muted-foreground">
           Create a new entity (organization) with an associated smart wallet for encrypted distributions. 
-          This endpoint returns an <code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">api_key</code> which serves as your 
+          The <code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">email_id</code> is typically handled automatically from the authenticated user's email, 
+          but can be explicitly provided. This endpoint returns an <code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">api_key</code> which serves as your 
           <code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">x-secret-key</code> for entity-specific operations.
         </p>
       </div>

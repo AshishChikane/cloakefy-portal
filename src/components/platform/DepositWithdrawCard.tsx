@@ -20,9 +20,6 @@ export function DepositWithdrawCard({ entityId, baseToken, onDeposit, onWithdraw
   const [amount, setAmount] = useState('');
   const [processing, setProcessing] = useState(false);
 
-  // Get display token name based on tab
-  // Deposit: Show regular token (USDC)
-  // Withdraw: Show encrypted token (e.USDC)
   const getDisplayToken = (): string => {
     if (activeTab === 'deposit') {
       // For deposit, show regular token (remove 'e' prefix)
@@ -54,22 +51,20 @@ export function DepositWithdrawCard({ entityId, baseToken, onDeposit, onWithdraw
     try {
       if (activeTab === 'deposit') {
         // Call onDeposit callback if provided (it will handle the API call)
-        if (onDeposit) {
-          await onDeposit(numAmount);
-        } else {
+        
           // Fallback: Call the deposit API directly
           await depositToEntity(entityId, numAmount);
+          await onDeposit(amount);
           toast.success(`Successfully deposited ${numAmount} ${displayToken}`);
-        }
+       
       } else {
         // Call onWithdraw callback if provided (it will handle the API call)
-        if (onWithdraw) {
-          await onWithdraw(numAmount);
-        } else {
+      
           // Fallback: Call the withdraw API directly
           await withdrawFromEntity(entityId, numAmount);
+          await onWithdraw(amount);
           toast.success(`Successfully withdrew ${numAmount} ${displayToken}`);
-        }
+        
       }
       setAmount('');
     } catch (error: any) {

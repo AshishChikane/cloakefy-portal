@@ -945,6 +945,48 @@ export async function resendVerification(entityId: string): Promise<void> {
   }
 }
 
+// API Response Types for Resend Sub-Entity Verification
+interface ResendSubEntityVerificationApiResponse {
+  isSuccess: boolean;
+  result?: any;
+  message: string;
+  statusCode: number;
+}
+
+export async function resendSubEntityVerification(subEntityId: string): Promise<void> {
+  try {
+    // Get API key from localStorage
+    const apiKey = localStorage.getItem('api_key');
+    
+    if (!apiKey) {
+      throw new Error('API key not found. Please create an entity first.');
+    }
+
+    // Call the API endpoint
+    const response = await axiosInstance.post<ResendSubEntityVerificationApiResponse>(
+      '/v1/sub-entities/resend-verification',
+      {
+        sub_entity_id: Number(subEntityId),
+      },
+      {
+        headers: {
+          'x-secret-key': apiKey,
+        },
+      }
+    );
+
+    if (response.data.isSuccess) {
+      return;
+    }
+
+    throw new Error(response.data.message || 'Failed to resend verification');
+  } catch (error: any) {
+    console.error('Error resending sub-entity verification:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to resend verification';
+    throw new Error(errorMessage);
+  }
+}
+
 // API Response Types for Google Auth Callback
 interface GoogleAuthCallbackApiResponse {
   isSuccess: boolean;

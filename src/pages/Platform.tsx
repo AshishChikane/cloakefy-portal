@@ -91,7 +91,6 @@ export default function Platform() {
       case 'entities':
         return (
           <div className="space-y-6">
-            {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 flex items-center gap-2">
