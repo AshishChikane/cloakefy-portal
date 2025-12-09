@@ -17,13 +17,11 @@ export default function PlatformLogin() {
   const toastShown = useRef(false);
 
   useEffect(() => {
-    // If already authenticated, redirect immediately
     if (isAuthenticated) {
       navigate('/platform', { replace: true });
       return;
     }
 
-    // Prevent multiple executions
     if (hasProcessed.current) {
       return;
     }
@@ -63,7 +61,6 @@ export default function PlatformLogin() {
         throw new Error('Token does not contain user id');
       }
 
-      // Extract user information from token
       const userInfo = {
         email: tokenData.email,
         name: tokenData.email.split('@')[0] || 'User', // Use email prefix as name if name not available
@@ -71,8 +68,9 @@ export default function PlatformLogin() {
         id: tokenData.id,
         google_id: tokenData.google_id,
         role: tokenData.role,
+        api_key:tokenData.api_key,
       };
-      console.log({tokenData})
+      console.log({userInfo})
       // Prepare user data for localStorage
       const platformUserData = {
         email: tokenData.email,
@@ -82,6 +80,7 @@ export default function PlatformLogin() {
         google_id: tokenData.google_id,
         role: tokenData.role ,
         token: token,
+        api_key:tokenData.api_key,
         // Store token metadata
         tokenExpiry: tokenData.exp ? new Date(tokenData.exp * 1000).toISOString() : null,
         tokenIssuedAt: tokenData.iat ? new Date(tokenData.iat * 1000).toISOString() : null,
@@ -93,7 +92,6 @@ export default function PlatformLogin() {
         try {
           const parsed = JSON.parse(storedUser);
           if (parsed.email === userInfo.email && parsed.token === token) {
-            // Already authenticated with same token, just redirect
             setStatus('success');
             setTimeout(() => {
               navigate('/platform', { replace: true });
@@ -105,7 +103,6 @@ export default function PlatformLogin() {
         }
       }
 
-      // Store complete user data in localStorage
       localStorage.setItem('platform_user', JSON.stringify(platformUserData));
       
       // Also store token data separately for easy access
@@ -116,18 +113,22 @@ export default function PlatformLogin() {
         role: tokenData.role,
         exp: tokenData.exp,
         iat: tokenData.iat,
+        api_key: tokenData.api_key,
       }));
 
-      // Sign in the user with token
+      // Store api_key separately for easy access (used by API functions)
+      if (tokenData.api_key) {
+        localStorage.setItem('api_key', tokenData.api_key);
+      }
+      
+      // Sign in user with AuthContext (includes api_key)
       signIn({
         email: userInfo.email,
         name: userInfo.name,
         picture: userInfo.picture,
-        role: userInfo.role as 'admin' | 'user' | 'viewer',
         token: token,
+        api_key: tokenData.api_key,
       });
-      
-      setStatus('success');
       
       // Show toast only once
       if (!toastShown.current) {

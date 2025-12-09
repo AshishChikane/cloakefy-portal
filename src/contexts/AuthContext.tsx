@@ -6,6 +6,7 @@ interface User {
   picture: string;
   role?: 'admin' | 'user' | 'viewer';
   token?: string;
+  api_key?: string;
 }
 
 interface AuthContextType {
@@ -26,7 +27,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = localStorage.getItem('platform_user');
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const userData = JSON.parse(storedUser);
+        // Also check for api_key in localStorage and add it if not present in userData
+        if (!userData.api_key) {
+          const apiKey = localStorage.getItem('api_key');
+          if (apiKey) {
+            userData.api_key = apiKey;
+            localStorage.setItem('platform_user', JSON.stringify(userData));
+          }
+        }
+        setUser(userData);
       } catch (error) {
         console.error('Error parsing stored user:', error);
         localStorage.removeItem('platform_user');

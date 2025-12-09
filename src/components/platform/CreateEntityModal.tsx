@@ -17,7 +17,7 @@ interface CreateEntityModalProps {
 }
 
 export function CreateEntityModal({ open, onOpenChange, onSubmit: onSubmitCallback }: CreateEntityModalProps) {
-  const { user } = useAuth();
+  const { user, signIn } = useAuth();
   const [name, setName] = useState('');
   const [type, setType] = useState<EntityType>('DAO');
   const [baseToken, setBaseToken] = useState<BaseToken>('eUSDC');
@@ -40,19 +40,46 @@ export function CreateEntityModal({ open, onOpenChange, onSubmit: onSubmitCallba
     setLoading(true);
     try {
       // Call API function from api.ts to create entity
+      // The createEntity function will automatically store api_key in localStorage if returned from API
       await createEntity({ name, type, baseToken }, emailId);
       
-      // Call onSubmit callback if provided - this will refresh entities list in parent
-      if (onSubmitCallback) {
-        await onSubmitCallback({ name, type, baseToken });
+      // Update platform_user with api_key if it wasn't already set from token
+      const platformUser = localStorage.getItem('platform_user');
+      if (platformUser) {
+        try {
+          const userData = JSON.parse(platformUser);
+          const apiKey = localStorage.getItem('api_key');
+          if (apiKey && !userData.api_key) {
+            userData.api_key = apiKey;
+            localStorage.setItem('platform_user', JSON.stringify(userData));
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
       }
       
-      // Reset form
-      setName('');
-      setType('DAO');
-      setBaseToken('eUSDC');
-      onOpenChange(false);
-      toast.success('Entity created successfully');
+      // Also update jwt_token_data with api_key if it wasn't already set
+      const jwtTokenData = localStorage.getItem('jwt_token_data');
+      if (jwtTokenData) {
+        try {
+          const tokenData = JSON.parse(jwtTokenData);
+          const apiKey = localStorage.getItem('api_key');
+          if (apiKey && !tokenData.api_key) {
+            tokenData.api_key = apiKey;
+            localStorage.setItem('jwt_token_data', JSON.stringify(tokenData));
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      }
+
+      // Update user context with api_key if it wasn't already set
+      const apiKey = localStorage.getItem('api_key');
+      if (apiKey && user && !user.api_key) {
+        const updatedUser = { ...user, api_key: apiKey };
+        signIn(updatedUser);
+      }
+      
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to create entity';
       toast.error(errorMessage);

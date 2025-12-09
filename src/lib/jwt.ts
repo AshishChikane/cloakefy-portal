@@ -37,6 +37,7 @@ export interface DecodedTokenData {
   email: string;
   google_id?: string;
   role?: string;
+  api_key?: string;
   exp?: number;
   iat?: number;
 }
@@ -49,6 +50,7 @@ export function extractTokenData(token: string): DecodedTokenData {
     email: payload.email,
     google_id: payload.google_id,
     role: payload.role,
+    api_key: payload.api_key,
     exp: payload.exp, // Expiration timestamp
     iat: payload.iat, // Issued at timestamp
   };
