@@ -182,7 +182,7 @@ interface CreateEntityApiResponse {
   statusCode: number;
 }
 
-export async function createEntity(data: CreateEntityRequest, emailId: string): Promise<Entity> {
+export async function createEntity(data: CreateEntityRequest, emailId: string): Promise<{ entity: Entity; api_key?: string }> {
   try {
     const response = await axiosInstance.post<CreateEntityApiResponse>('/v1/entities', {
       name: data.name.trim(),
@@ -201,12 +201,15 @@ export async function createEntity(data: CreateEntityRequest, emailId: string): 
 
       // Map API response to Entity interface
       return {
-        id: String(apiEntity.entity_id),
-        name: apiEntity.name,
-        type: apiEntity.entity_type as Entity['type'],
-        baseToken: apiEntity.base_token as Entity['baseToken'],
-        smartWalletAddress: apiEntity.wallet_address || '',
-        balance: 0,
+        entity: {
+          id: String(apiEntity.entity_id),
+          name: apiEntity.name,
+          type: apiEntity.entity_type as Entity['type'],
+          baseToken: apiEntity.base_token as Entity['baseToken'],
+          smartWalletAddress: apiEntity.wallet_address || '',
+          balance: 0,
+        },
+        api_key: apiEntity.api_key,
       };
     }
 

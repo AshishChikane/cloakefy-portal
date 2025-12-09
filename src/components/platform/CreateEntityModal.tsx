@@ -41,14 +41,19 @@ export function CreateEntityModal({ open, onOpenChange, onSubmit: onSubmitCallba
     try {
       // Call API function from api.ts to create entity
       // The createEntity function will automatically store api_key in localStorage if returned from API
-      await createEntity({ name, type, baseToken }, emailId);
+      const response = await createEntity({ name, type, baseToken }, emailId);
+      console.log({response})
+      
+      // Get api_key from response if available, otherwise from localStorage
+      const apiKeyFromResponse = response.api_key;
+      const apiKeyFromStorage = localStorage.getItem('api_key');
+      const apiKey = apiKeyFromResponse || apiKeyFromStorage;
       
       // Update platform_user with api_key if it wasn't already set from token
       const platformUser = localStorage.getItem('platform_user');
       if (platformUser) {
         try {
           const userData = JSON.parse(platformUser);
-          const apiKey = localStorage.getItem('api_key');
           if (apiKey && !userData.api_key) {
             userData.api_key = apiKey;
             localStorage.setItem('platform_user', JSON.stringify(userData));
@@ -63,7 +68,6 @@ export function CreateEntityModal({ open, onOpenChange, onSubmit: onSubmitCallba
       if (jwtTokenData) {
         try {
           const tokenData = JSON.parse(jwtTokenData);
-          const apiKey = localStorage.getItem('api_key');
           if (apiKey && !tokenData.api_key) {
             tokenData.api_key = apiKey;
             localStorage.setItem('jwt_token_data', JSON.stringify(tokenData));
@@ -74,7 +78,6 @@ export function CreateEntityModal({ open, onOpenChange, onSubmit: onSubmitCallba
       }
 
       // Update user context with api_key if it wasn't already set
-      const apiKey = localStorage.getItem('api_key');
       if (apiKey && user && !user.api_key) {
         const updatedUser = { ...user, api_key: apiKey };
         signIn(updatedUser);
