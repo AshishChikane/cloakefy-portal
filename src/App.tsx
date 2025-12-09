@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Platform from "./pages/Platform";
+import PlatformLogin from "./pages/PlatformLogin";
 import EntityDetailPage from "./pages/EntityDetailPage";
 import Docs from "./pages/Docs";
 import NotFound from "./pages/NotFound";
@@ -22,6 +23,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/platform" element={<Platform />} />
+            <Route path="/platform/login" element={<PlatformLogin />} />
             <Route path="/entity/:id" element={<EntityDetailPage />} />
             <Route path="/docs" element={<Docs />} />
             <Route path="/docs/:slug" element={<Docs />} />

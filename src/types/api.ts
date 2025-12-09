@@ -9,6 +9,7 @@ export interface Entity {
   baseToken: BaseToken;
   smartWalletAddress: string;
   balance: number;
+  walletBalance?: WalletBalance;
 }
 
 export interface WalletBalance {

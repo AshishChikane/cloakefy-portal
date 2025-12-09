@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { X, Chrome } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { googleAuthCallback } from '@/services/api';
+import { toast } from 'sonner';
 
 interface GoogleSignInModalProps {
   open: boolean;
@@ -13,91 +15,96 @@ export function GoogleSignInModal({ open, onSignIn }: GoogleSignInModalProps) {
   const [loading, setLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
-    setLoading(true);
-    try {
-      // Check if Google Identity Services is loaded
-      if (window.google && window.google.accounts) {
-        // Use One Tap or Button flow
-        window.google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
-          callback: handleCredentialResponse,
-        });
+    // setLoading(true);
+      window.open(`http://localhost:8000/v1/auth/google`, "_self");
+    // try {
+    //   // Check if Google Identity Services is loaded
+    //   if (window.google && window.google.accounts) {
+    //     // Use One Tap or Button flow
+    //     window.google.accounts.id.initialize({
+    //       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+    //       callback: handleCredentialResponse,
+    //     });
 
-        // Try One Tap first
-        window.google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // Fallback: Use OAuth2 token client
-            const client = window.google.accounts.oauth2.initTokenClient({
-              client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
-              scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-              callback: async (response: any) => {
-                if (response.access_token) {
-                  await fetchUserInfo(response.access_token);
-                } else {
-                  setLoading(false);
-                }
-              },
-            });
-            client.requestAccessToken();
-          }
-        });
-      } else {
-        // Fallback: Use mock authentication for development (when Google Client ID is not configured)
-        setTimeout(() => {
-          onSignIn({
-            email: 'demo1@example.com',
-            name: 'Demo User',
-            picture: '',
-          });
-          setLoading(false);
-        }, 1000);
-      }
-    } catch (error) {
-      console.error('Google Sign-In Error:', error);
-      // Fallback to demo mode on error
-      setTimeout(() => {
-        onSignIn({
-          email: 'demo1@example.com',
-          name: 'Demo User',
-          picture: '',
-        });
-        setLoading(false);
-      }, 500);
-    }
+    //     // Try One Tap first
+    //     window.google.accounts.id.prompt((notification: any) => {
+    //       if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+    //         // Fallback: Use OAuth2 token client
+    //         const client = window.google.accounts.oauth2.initTokenClient({
+    //           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+    //           scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+    //           callback: async (response: any) => {
+    //             if (response.access_token) {
+    //               await fetchUserInfo(response.access_token);
+    //             } else {
+    //               setLoading(false);
+    //             }
+    //           },
+    //         });
+    //         client.requestAccessToken();
+    //       }
+    //     });
+    //   } else {
+    //     // Fallback: Use mock authentication for development (when Google Client ID is not configured)
+    //     setTimeout(() => {
+    //       onSignIn({
+    //         email: 'demo1@example.com',
+    //         name: 'Demo User',
+    //         picture: '',
+    //       });
+    //       setLoading(false);
+    //     }, 1000);
+    //   }
+    // } catch (error) {
+    //   console.error('Google Sign-In Error:', error);
+    //   // Fallback to demo mode on error
+    //   setTimeout(() => {
+    //     onSignIn({
+    //       email: 'demo1@example.com',
+    //       name: 'Demo User',
+    //       picture: '',
+    //     });
+    //     setLoading(false);
+    //   }, 500);
+    // }
   };
 
-  const handleCredentialResponse = (response: any) => {
-    // Decode JWT token to get user info
+  const handleCredentialResponse = async (response: any) => {
+    // Send credential to backend API
     try {
-      const payload = JSON.parse(atob(response.credential.split('.')[1]));
+      const userInfo = await googleAuthCallback({
+        credential: response.credential,
+      });
+      
       onSignIn({
-        email: payload.email,
-        name: payload.name,
-        picture: payload.picture,
+        email: userInfo.email,
+        name: userInfo.name,
+        picture: userInfo.picture || '',
       });
       setLoading(false);
-    } catch (error) {
-      console.error('Error decoding credential:', error);
+    } catch (error: any) {
+      console.error('Error in credential response:', error);
+      toast.error(error.message || 'Failed to sign in with Google');
       setLoading(false);
     }
   };
 
   const fetchUserInfo = async (accessToken: string) => {
     try {
-      const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+      // Send access token to backend API
+      const userInfo = await googleAuthCallback({
+        access_token: accessToken,
       });
-      const userInfo = await response.json();
+      
       onSignIn({
         email: userInfo.email,
         name: userInfo.name,
-        picture: userInfo.picture,
+        picture: userInfo.picture || '',
       });
       setLoading(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching user info:', error);
+      toast.error(error.message || 'Failed to sign in with Google');
       setLoading(false);
     }
   };

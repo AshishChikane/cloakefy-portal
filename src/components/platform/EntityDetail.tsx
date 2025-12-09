@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { SubUsersList } from './SubUsersList';
 import { TransferForm } from './TransferForm';
 import { TransactionHistory } from './TransactionHistory';
-import { getSubUsers, getTransactions, getEntityBalance, createSubUser, createTransfer } from '@/services/api';
+import { DepositWithdrawCard } from './DepositWithdrawCard';
+import { getSubUsers, getTransactions, getEntityBalance, createSubUser, getEntity, resendVerification } from '@/services/api';
 import { toast } from 'sonner';
-import { Copy, RefreshCw, ArrowLeft, Loader2, Wallet, TrendingUp, Sparkles } from 'lucide-react';
+import { Copy, RefreshCw, ArrowLeft, Loader2, Wallet, TrendingUp, Sparkles, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface EntityDetailProps {
@@ -21,10 +22,18 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
   const [loadingSubUsers, setLoadingSubUsers] = useState(true);
   const [loadingTransactions, setLoadingTransactions] = useState(true);
   const [refreshingBalance, setRefreshingBalance] = useState(false);
-
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [entityData, setEntityData] = useState<Entity>(entity);
+  
   useEffect(() => {
     loadData();
+    loadEntityData();
+    localStorage.setItem('api_key', 'd9f7643f93827e7224d76fabfac42b430500e4d9aa0ab7a61597900c5a6a88a5');
   }, [entity.id]);
+
+  useEffect(() => {
+    setEntityData(entity);
+  }, [entity]);
 
   const loadData = async () => {
     setLoadingSubUsers(true);
@@ -45,17 +54,56 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
     }
   };
 
+  const loadEntityData = async () => {
+    try {
+      const updatedEntity = await getEntity(entity.id);
+      if (updatedEntity) {
+        setEntityData(updatedEntity);
+        onEntityUpdate(updatedEntity);
+      }
+    } catch (error) {
+      console.error('Error loading entity data:', error);
+    }
+  };
+
   const refreshBalance = async () => {
     setRefreshingBalance(true);
     try {
-      const balance = await getEntityBalance(entity.id);
-      onEntityUpdate({ ...entity, balance });
+      await loadEntityData();
       toast.success('Balance refreshed');
     } catch (error) {
       toast.error('Failed to refresh balance');
     } finally {
       setRefreshingBalance(false);
     }
+  };
+
+  const handleResendVerification = async () => {
+    setSendingVerification(true);
+    try {
+      await resendVerification(entity.id);
+      toast.success('Verification email sent successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send verification email');
+    } finally {
+      setSendingVerification(false);
+    }
+  };
+
+  const getIsRegistered = (): boolean => {
+    if (!entityData.walletBalance) return false;
+    
+    // Check based on base token
+    if (entityData.baseToken === 'eUSDC') {
+      return entityData.walletBalance.eusdc?.isRegistered ?? false;
+    } else if (entityData.baseToken === 'eUSDT') {
+      return entityData.walletBalance.eusdt?.isRegistered ?? false;
+    } else if (entityData.baseToken === 'eAVAX') {
+      // AVAX doesn't have isRegistered, so return true
+      return true;
+    }
+    
+    return false;
   };
 
   const handleAddSubUser = async (data: CreateSubUserRequest) => {
@@ -75,23 +123,22 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
 
   const handleTransfer = async (data: TransferRequest) => {
     try {
-      const txs = await createTransfer(data);
-      setTransactions([...txs, ...transactions]);
-      const balance = await getEntityBalance(entity.id);
-      onEntityUpdate({ ...entity, balance });
-      toast.success(`Successfully sent ${txs.length} transfer${txs.length !== 1 ? 's' : ''} to ${txs.length} recipient${txs.length !== 1 ? 's' : ''}`);
+      // Note: createTransfer is now handled in TransferForm component
+      // This callback is just for refreshing data after transfer
+      await loadEntityData();
+      toast.success('Transfer completed successfully');
     } catch (error: any) {
-      toast.error(error.message || 'Transfer failed');
+      toast.error(error.message || 'Failed to refresh data after transfer');
       throw error;
     }
   };
 
   const copyAddress = () => {
-    navigator.clipboard.writeText(entity.smartWalletAddress);
+    navigator.clipboard.writeText(entityData.smartWalletAddress);
     toast.success('Address copied to clipboard');
   };
 
-  const shortAddress = `${entity.smartWalletAddress.slice(0, 10)}...${entity.smartWalletAddress.slice(-8)}`;
+  const shortAddress = `${entityData.smartWalletAddress.slice(0, 10)}...${entityData.smartWalletAddress.slice(-8)}`;
 
   return (
     <motion.div
@@ -117,10 +164,10 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
           <div className="absolute -inset-0.5 bg-primary/20 rounded-xl blur-md opacity-50" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg sm:text-xl font-bold text-foreground mb-1 truncate">{entity.name}</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-foreground mb-1 truncate">{entityData.name}</h2>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
-              {entity.type}
+              {entityData.type}
             </span>
             <span className="text-xs text-muted-foreground">Entity Details</span>
           </div>
@@ -129,26 +176,41 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-        <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all">
+        <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all border-border">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-xs font-medium text-muted-foreground">Balance</span>
             <TrendingUp className="w-3.5 h-3.5 text-green-400" />
           </div>
           <div className="flex items-baseline gap-1.5">
             <p className="text-base sm:text-lg font-bold text-foreground">
-              {entity.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {(() => {
+                // Calculate balance from walletBalance based on baseToken
+                // tokenBalance = USDC, encryptedBalance = eUSDC
+                if (entityData.walletBalance) {
+                  if (entityData.baseToken === 'eUSDC' && entityData.walletBalance.eusdc) {
+                    // eUSDC balance is encryptedBalance
+                    return parseFloat(entityData.walletBalance.eusdc.encryptedBalance || '0').toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  } else if (entityData.baseToken === 'eUSDT' && entityData.walletBalance.eusdt) {
+                    // eUSDT balance is encryptedBalance
+                    return parseFloat(entityData.walletBalance.eusdt.encryptedBalance || '0').toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  } else if (entityData.baseToken === 'eAVAX' && entityData.walletBalance.avax) {
+                    return parseFloat(entityData.walletBalance.avax.balance || '0').toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+                  }
+                }
+                return entityData.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              })()}
             </p>
-            <span className="text-xs text-muted-foreground font-medium">{entity.baseToken}</span>
+            <span className="text-xs text-muted-foreground font-medium">{entityData.baseToken}</span>
           </div>
         </div>
-        <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all">
+        <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all border-border">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-xs font-medium text-muted-foreground">Sub Users</span>
             <Sparkles className="w-3.5 h-3.5 text-primary" />
           </div>
           <p className="text-base sm:text-lg font-bold text-foreground">{subUsers.length}</p>
         </div>
-        <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all">
+        <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all border-border">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-xs font-medium text-muted-foreground">Transactions</span>
             <Sparkles className="w-3.5 h-3.5 text-primary" />
@@ -158,9 +220,8 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-        {/* Left column - Wallet Info */}
-        <div className="space-y-4">
-          <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all">
+        <div className="space-y-4 flex flex-col">
+          <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all h-[470px] border-border flex flex-col">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-3 sm:mb-4">
               <h3 className="text-sm sm:text-base font-bold text-foreground">Wallet Information</h3>
               <Button 
@@ -181,7 +242,7 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
               </Button>
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-1.5">Smart Wallet Address</p>
                 <div className="flex items-center gap-2">
@@ -199,10 +260,107 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
                 </div>
               </div>
               
-              <div>
+              {/* <div>
                 <p className="text-xs font-medium text-muted-foreground mb-1.5">Base Token</p>
-                <p className="text-sm font-semibold text-foreground">{entity.baseToken}</p>
-              </div>
+                <p className="text-sm font-semibold text-foreground">{entityData.baseToken}</p>
+              </div> */}
+
+              {/* Wallet Balances */}
+              {entityData.walletBalance && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Wallet Balances</p>
+                  <div className="flex flex-wrap gap-2">
+                    {entityData.walletBalance.avax && (
+                      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-secondary/30 border border-border/50 flex-shrink-0">
+                        <Wallet className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                        <span className="text-xs font-medium text-foreground">AVAX</span>
+                        <span className="text-xs font-semibold text-foreground">
+                          {parseFloat(entityData.walletBalance.avax.balance || '0').toFixed(4)}
+                        </span>
+                      </div>
+                    )}
+                    {entityData.walletBalance.eusdc && (
+                      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-secondary/30 border border-border/50 flex-shrink-0">
+                        <Wallet className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span className="text-xs font-medium text-foreground">e.USDC</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-semibold text-foreground">
+                            {parseFloat(entityData.walletBalance.eusdc.encryptedBalance || '0').toFixed(2)}
+                          </span>
+                          {entityData.walletBalance.eusdc.tokenBalance && parseFloat(entityData.walletBalance.eusdc.tokenBalance) > 0 && (
+                            <span className="text-xs text-blue-400/70">
+                              ({parseFloat(entityData.walletBalance.eusdc.tokenBalance).toFixed(2)} USDC)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {entityData.walletBalance.eusdt && (
+                      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-secondary/30 border border-border/50 flex-shrink-0">
+                        <Wallet className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                        <span className="text-xs font-medium text-foreground">e.USDT</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-semibold text-foreground">
+                            {parseFloat(entityData.walletBalance.eusdt.encryptedBalance || '0').toFixed(2)}
+                          </span>
+                          {entityData.walletBalance.eusdt.tokenBalance && parseFloat(entityData.walletBalance.eusdt.tokenBalance) > 0 && (
+                            <span className="text-xs text-green-400/70">
+                              ({parseFloat(entityData.walletBalance.eusdt.tokenBalance).toFixed(2)} USDT)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Verification Status */}
+              {!getIsRegistered() && (
+                <div className="p-2.5 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                  <div className="flex items-start gap-2 mb-2">
+                    <ShieldAlert className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-orange-600 dark:text-orange-400 mb-1">
+                        Verification Required
+                      </p>
+                      <p className="text-xs text-orange-600/80 dark:text-orange-400/80 leading-relaxed mb-2">
+                        Your {entityData.baseToken === 'eUSDC' ? 'e.USDC' : entityData.baseToken === 'eUSDT' ? 'e.USDT' : entityData.baseToken} token is not registered. Please verify your email to complete registration.
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleResendVerification}
+                        disabled={sendingVerification}
+                        className="w-full text-xs border-orange-500/30 hover:bg-orange-500/10 hover:border-orange-500/50"
+                      >
+                        {sendingVerification ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <ShieldAlert className="w-3 h-3 mr-2" />
+                            Verify Again
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {getIsRegistered() && (
+                <div className="p-2.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <p className="text-xs font-medium text-green-600 dark:text-green-400">
+                      Token Verified
+                    </p>
+                  </div>
+                </div>
+              )}
               
               <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20">
                 <p className="text-xs text-muted-foreground leading-relaxed">
@@ -212,27 +370,44 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
               </div>
             </div>
           </div>
-          
-          <TransferForm
-            subUsers={subUsers}
-            baseToken={entity.baseToken}
-            entityId={entity.id}
-            onTransfer={handleTransfer}
+
+          {/* 3rd Card - Deposit & Withdraw */}
+          <DepositWithdrawCard
+            entityId={entityData.id}
+            baseToken={entityData.baseToken}
+            onDeposit={async (amount) => {
+              // Deposit API is handled in DepositWithdrawCard
+              // Refresh entity data to get updated balances
+              await loadEntityData();
+            }}
+            onWithdraw={async (amount) => {
+              // TODO: Implement withdraw API call
+              await refreshBalance();
+            }}
           />
         </div>
         
-        {/* Right column - Sub Users */}
-        <div>
+        {/* Right column */}
+        <div className="space-y-4 flex flex-col">
+          {/* 2nd Card - Sub Users */}
           <SubUsersList
             subUsers={subUsers}
             loading={loadingSubUsers}
             onAddSubUser={handleAddSubUser}
           />
+
+          {/* 4th Card - Transfer Tokens to Sub Users */}
+          <TransferForm
+            subUsers={subUsers}
+            baseToken={entityData.baseToken}
+            entityId={entityData.id}
+            onTransfer={handleTransfer}
+          />
         </div>
       </div>
 
       {/* Transaction History */}
-      <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all">
+      <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all border-border">
         <h3 className="text-sm sm:text-base font-bold text-foreground mb-3 sm:mb-4">Transaction History</h3>
         <TransactionHistory transactions={transactions} loading={loadingTransactions} />
       </div>

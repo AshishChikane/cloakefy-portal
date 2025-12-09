@@ -94,8 +94,8 @@ export function SubUsersList({ subUsers, loading, onAddSubUser }: SubUsersListPr
     return `${key.slice(0, 6)}${'•'.repeat(key.length - 12)}${key.slice(-6)}`;
   };
   return (
-    <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-3 sm:mb-4">
+    <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all flex flex-col h-[470px] border-border">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-3 sm:mb-4 flex-shrink-0">
         <div>
           <h3 className="text-sm sm:text-base font-bold text-foreground">Sub Users</h3>
           <p className="text-xs text-muted-foreground mt-0.5">Manage recipients for this entity</p>
@@ -110,24 +110,25 @@ export function SubUsersList({ subUsers, loading, onAddSubUser }: SubUsersListPr
         </Button>
       </div>
       
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        </div>
-      ) : subUsers.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center py-12"
-        >
-          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-primary/10 flex items-center justify-center">
-            <User className="w-8 h-8 text-primary opacity-50" />
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
-          <p className="text-muted-foreground font-medium mb-1">No sub users yet</p>
-          <p className="text-sm text-muted-foreground/70">Add recipients to start making transfers</p>
-        </motion.div>
-      ) : (
-        <div className="space-y-2">
+        ) : subUsers.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-12"
+          >
+            <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-primary/10 flex items-center justify-center">
+              <User className="w-8 h-8 text-primary opacity-50" />
+            </div>
+            <p className="text-muted-foreground font-medium mb-1">No sub users yet</p>
+            <p className="text-sm text-muted-foreground/70">Add recipients to start making transfers</p>
+          </motion.div>
+        ) : (
+          <div className="space-y-2 pr-1">
           {subUsers.map((user, index) => (
             <motion.div
               key={user.id}
@@ -182,11 +183,11 @@ export function SubUsersList({ subUsers, loading, onAddSubUser }: SubUsersListPr
                         <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20">
                           <Wallet className="w-3 h-3 text-blue-500" />
                           <span className="text-xs font-medium text-blue-500">
-                            {parseFloat(user.walletBalance.eusdc.tokenBalance || '0').toFixed(2)} eUSDC
+                            {parseFloat(user.walletBalance.eusdc.encryptedBalance || '0').toFixed(2)} eUSDC
                           </span>
-                          {user.walletBalance.eusdc.encryptedBalance && parseFloat(user.walletBalance.eusdc.encryptedBalance) > 0 && (
+                          {user.walletBalance.eusdc.tokenBalance && parseFloat(user.walletBalance.eusdc.tokenBalance) > 0 && (
                             <span className="text-xs text-blue-400/70">
-                              ({parseFloat(user.walletBalance.eusdc.encryptedBalance).toFixed(2)} enc)
+                              ({parseFloat(user.walletBalance.eusdc.tokenBalance).toFixed(2)} USDC)
                             </span>
                           )}
                         </div>
@@ -195,11 +196,11 @@ export function SubUsersList({ subUsers, loading, onAddSubUser }: SubUsersListPr
                         <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-green-500/10 border border-green-500/20">
                           <Wallet className="w-3 h-3 text-green-500" />
                           <span className="text-xs font-medium text-green-500">
-                            {parseFloat(user.walletBalance.eusdt.tokenBalance || '0').toFixed(2)} eUSDT
+                            {parseFloat(user.walletBalance.eusdt.encryptedBalance || '0').toFixed(2)} eUSDT
                           </span>
-                          {user.walletBalance.eusdt.encryptedBalance && parseFloat(user.walletBalance.eusdt.encryptedBalance) > 0 && (
+                          {user.walletBalance.eusdt.tokenBalance && parseFloat(user.walletBalance.eusdt.tokenBalance) > 0 && (
                             <span className="text-xs text-green-400/70">
-                              ({parseFloat(user.walletBalance.eusdt.encryptedBalance).toFixed(2)} enc)
+                              ({parseFloat(user.walletBalance.eusdt.tokenBalance).toFixed(2)} USDT)
                             </span>
                           )}
                         </div>
@@ -218,8 +219,9 @@ export function SubUsersList({ subUsers, loading, onAddSubUser }: SubUsersListPr
               )}
             </motion.div>
           ))}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
       
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="bg-card border-border">

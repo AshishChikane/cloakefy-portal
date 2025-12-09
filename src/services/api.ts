@@ -194,6 +194,7 @@ interface WalletResponse {
   chain_id: string;
   createdAt: string;
   updatedAt: string;
+  balances?: WalletBalancesResponse;
 }
 
 interface WalletBalancesResponse {
@@ -262,14 +263,20 @@ export async function getEntity(id: string): Promise<Entity | undefined> {
     
     if (response.data.isSuccess && response.data.result) {
       const apiEntity = response.data.result;
+      const wallet = apiEntity.wallet;
       // Map API response to Entity interface
       return {
         id: String(apiEntity.entity_id),
         name: apiEntity.name,
         type: apiEntity.entity_type as Entity['type'],
         baseToken: apiEntity.base_token as Entity['baseToken'],
-        smartWalletAddress: apiEntity.wallet.address,
+        smartWalletAddress: wallet.address,
         balance: 0, // Balance might need separate API call
+        walletBalance: wallet.balances ? {
+          avax: wallet.balances.avax,
+          eusdc: wallet.balances.eusdc,
+          eusdt: wallet.balances.eusdt,
+        } : undefined,
       };
     }
     
@@ -409,54 +416,88 @@ export async function createSubUser(entityId: string, data: CreateSubUserRequest
   }
 }
 
-export async function createTransfer(data: TransferRequest): Promise<Transaction[]> {
-  await delay(1500);
-  const entity = mockEntities.find(e => e.id === data.entityId);
-  
-  if (!entity) {
-    throw new Error('Entity not found');
-  }
-  
-  // Calculate total amount
-  const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
-  
-  if (entity.balance < totalAmount) {
-    throw new Error(`Insufficient balance. Required: ${totalAmount} ${data.token}, Available: ${entity.balance} ${data.token}`);
-  }
-  
-  // Validate all recipients exist
-  const transactions: Transaction[] = [];
-  
-  for (const recipient of data.recipients) {
-    const subUser = mockSubUsers.find(su => su.id === recipient.subUserId);
+// API Response Types for Transfer
+interface TransferApiResponse {
+  isSuccess: boolean;
+  result?: any;
+  message: string;
+  statusCode: number;
+}
+
+interface TransferApiRequest {
+  entity_id: number;
+  recipients: Array<{
+    address: string;
+    amount: string;
+  }>;
+  network: string;
+}
+
+export async function createTransfer(data: TransferRequest, subUsers: SubUser[], includePaymentHeader: boolean = false): Promise<any> {
+  try {
+    // Get API key from localStorage
+    const apiKey = localStorage.getItem('api_key');
     
-    if (!subUser) {
-      throw new Error(`SubUser with ID ${recipient.subUserId} not found`);
+    if (!apiKey) {
+      throw new Error('API key not found. Please create an entity first.');
     }
-    
-    const newTx: Transaction = {
-      id: 'tx' + (mockTransactions.length + transactions.length + 1),
-      entityId: data.entityId,
-      fromAddress: entity.smartWalletAddress,
-      toAddress: subUser.walletAddress,
-      toName: subUser.name,
-      amount: recipient.amount,
-      token: data.token,
-      status: 'Completed',
-      txHash: '0x' + randomHex(64),
-      timestamp: new Date().toISOString(),
+
+    // Map recipients from sub-user IDs to wallet addresses
+    const recipients = data.recipients.map(recipient => {
+      const subUser = subUsers.find(su => su.id === recipient.subUserId);
+      
+      if (!subUser || !subUser.walletAddress) {
+        throw new Error(`SubUser with ID ${recipient.subUserId} not found or has no wallet address`);
+      }
+      
+      return {
+        address: subUser.walletAddress,
+        amount: String(recipient.amount), // Convert to string as API expects
+      };
+    });
+
+    // Prepare headers
+    const headers: Record<string, string> = {
+      'x-secret-key': apiKey,
     };
     
-    transactions.push(newTx);
+    // Add x-payment header if requested
+    if (includePaymentHeader) {
+      headers['x-payment'] = 'true';
+    }
+
+    // Call the API endpoint
+    const response = await axiosInstance.post<TransferApiResponse>(
+      '/v1/facilitator/run',
+      {
+        entity_id: Number(data.entityId),
+        recipients: recipients,
+        network: 'avalanche-fuji',
+      },
+      {
+        headers: headers,
+      }
+    );
+    console.log({response})
+    
+    // If statusCode is 402, return true
+    if (response.data.statusCode === 402) {
+      return true;
+    }
+    
+    if (response.data.isSuccess) {
+      return response.data.result;
+    }
+
+    throw new Error(response.data.message || 'Failed to create transfer');
+  } catch (error: any) {
+    console.error('Error creating transfer:', error);
+    if (error.response?.data?.statusCode === 402) {
+      return true;
+    }
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to create transfer';
+    throw new Error(errorMessage);
   }
-  
-  // Deduct total amount from entity balance
-  entity.balance -= totalAmount;
-  
-  // Add all transactions to mock store
-  mockTransactions.unshift(...transactions);
-  
-  return transactions;
 }
 
 export async function getTransactions(entityId: string): Promise<Transaction[]> {
@@ -505,6 +546,181 @@ export async function getSubUserPrivateKey(subEntityId: string): Promise<string>
   } catch (error: any) {
     console.error('Error fetching private key:', error);
     const errorMessage = error.response?.data?.message || error.message || 'Failed to get private key';
+    throw new Error(errorMessage);
+  }
+}
+
+// API Response Types for Deposit
+interface DepositApiResponse {
+  isSuccess: boolean;
+  result?: any;
+  message: string;
+  statusCode: number;
+}
+
+export async function depositToEntity(entityId: string, amount: number): Promise<void> {
+  try {
+    // Call the API endpoint
+    const response = await axiosInstance.post<DepositApiResponse>(
+      '/v1/entities/deposit',
+      {
+        entity_id: Number(entityId),
+        amount: amount,
+      },
+      {
+        headers: {
+          'x-secret-key': localStorage.getItem('api_key'),
+        },
+      }
+    );
+
+    if (response.data.isSuccess) {
+      return;
+    }
+
+    throw new Error(response.data.message || 'Failed to deposit funds');
+  } catch (error: any) {
+    console.error('Error depositing funds:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to deposit funds';
+    throw new Error(errorMessage);
+  }
+}
+
+// API Response Types for Withdraw
+interface WithdrawApiResponse {
+  isSuccess: boolean;
+  result?: any;
+  message: string;
+  statusCode: number;
+}
+
+export async function withdrawFromEntity(entityId: string, amount: number): Promise<void> {
+  try {
+    // Call the API endpoint
+    const response = await axiosInstance.post<WithdrawApiResponse>(
+      '/v1/entities/withdraw',
+      {
+        entity_id: Number(entityId),
+        amount: String(amount), // API expects string format
+      },
+      {
+        headers: {
+          'x-secret-key': localStorage.getItem('api_key'),
+        },
+      }
+    );
+
+    if (response.data.isSuccess) {
+      return;
+    }
+
+    throw new Error(response.data.message || 'Failed to withdraw funds');
+  } catch (error: any) {
+    console.error('Error withdrawing funds:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to withdraw funds';
+    throw new Error(errorMessage);
+  }
+}
+
+// API Response Types for Resend Verification
+interface ResendVerificationApiResponse {
+  isSuccess: boolean;
+  result?: any;
+  message: string;
+  statusCode: number;
+}
+
+export async function resendVerification(entityId: string): Promise<void> {
+  try {
+    // Call the API endpoint
+    const response = await axiosInstance.post<ResendVerificationApiResponse>(
+      '/v1/entities/resend-verification',
+      {
+        entity_id: Number(entityId),
+      },
+      {
+        headers: {
+          'x-secret-key': localStorage.getItem('api_key'),
+        },
+      }
+    );
+
+    if (response.data.isSuccess) {
+      return;
+    }
+
+    throw new Error(response.data.message || 'Failed to resend verification');
+  } catch (error: any) {
+    console.error('Error resending verification:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to resend verification';
+    throw new Error(errorMessage);
+  }
+}
+
+// API Response Types for Google Auth Callback
+interface GoogleAuthCallbackApiResponse {
+  isSuccess: boolean;
+  result?: {
+    user?: {
+      email: string;
+      name: string;
+      picture?: string;
+    };
+    token?: string;
+    [key: string]: any;
+  };
+  message: string;
+  statusCode: number;
+}
+
+export interface GoogleAuthCallbackRequest {
+  credential?: string;
+  access_token?: string;
+  code?: string;
+}
+
+export async function googleAuthCallback(data: GoogleAuthCallbackRequest): Promise<{
+  email: string;
+  name: string;
+  picture: string;
+  token?: string;
+}> {
+  try {
+    // Call the API endpoint
+    const response = await axiosInstance.post<GoogleAuthCallbackApiResponse>(
+      '/v1/auth/google/callback',
+      data
+    );
+
+    if (response.data.isSuccess && response.data.result) {
+      const result = response.data.result;
+      
+      // Extract user info from response
+      const userInfo = {
+        email: result.user?.email || '',
+        name: result.user?.name || '',
+        picture: result.user?.picture || '',
+        token: result.token,
+      };
+
+      // Store token if provided
+      if (result.token) {
+        const platformUser = {
+          email: userInfo.email,
+          name: userInfo.name,
+          picture: userInfo.picture,
+          token: result.token,
+        };
+        localStorage.setItem('platform_user', JSON.stringify(platformUser));
+      }
+
+      return userInfo;
+    }
+
+    throw new Error(response.data.message || 'Failed to authenticate with Google');
+  } catch (error: any) {
+    console.error('Error in Google auth callback:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to authenticate with Google';
     throw new Error(errorMessage);
   }
 }

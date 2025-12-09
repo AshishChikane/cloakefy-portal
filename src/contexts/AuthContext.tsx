@@ -5,6 +5,7 @@ interface User {
   name: string;
   picture: string;
   role?: 'admin' | 'user' | 'viewer';
+  token?: string;
 }
 
 interface AuthContextType {
