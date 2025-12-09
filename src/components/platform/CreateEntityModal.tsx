@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CreateEntityRequest, EntityType, BaseToken } from '@/types/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { createEntity } from '@/services/api';
+import { createEntity, getEntities } from '@/services/api';
 import { Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -81,6 +81,29 @@ export function CreateEntityModal({ open, onOpenChange, onSubmit: onSubmitCallba
       if (apiKey && user && !user.api_key) {
         const updatedUser = { ...user, api_key: apiKey };
         signIn(updatedUser);
+      }
+
+      // Show success toast
+      toast.success(`Entity "${name}" created successfully!`);
+      
+      // Reset form
+      setName('');
+      setType('DAO');
+      setBaseToken('eUSDC');
+      
+      // Close modal first
+      onOpenChange(false);
+      
+      // Call get entities API to refresh the list
+      try {
+        await getEntities();
+      } catch (error) {
+        console.error('Failed to refresh entities list:', error);
+      }
+      
+      // Call callback if provided (for refreshing entity list in parent component)
+      if (onSubmitCallback) {
+        await onSubmitCallback({ name, type, baseToken });
       }
       
     } catch (error: any) {
