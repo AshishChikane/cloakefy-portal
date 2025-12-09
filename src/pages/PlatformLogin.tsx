@@ -5,6 +5,7 @@ import { DashboardBackground } from '@/components/ui/DashboardBackground';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { decodeJWT, extractTokenData } from '@/lib/jwt';
 
 export default function PlatformLogin() {
   const [searchParams] = useSearchParams();
@@ -48,43 +49,45 @@ export default function PlatformLogin() {
     // Decode URL-encoded token (in case it's URL encoded)
     const token = decodeURIComponent(tokenParam);
 
-    // Decode/decrypt the JWT token
+    // Decode JWT token and extract user data
     try {
-      // JWT tokens have 3 parts separated by dots: header.payload.signature
-      const parts = token.split('.');
+      // Decode the JWT token payload
+      const tokenData = extractTokenData(token);
       
-      if (parts.length !== 3) {
-        throw new Error('Invalid token format - expected JWT format');
-      }
-
-      // Decode the payload (second part) - JWT uses base64url encoding
-      // Replace URL-safe characters: - becomes +, _ becomes /
-      const base64Payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-      // Add padding if needed
-      const paddedPayload = base64Payload + '='.repeat((4 - base64Payload.length % 4) % 4);
-      
-      let payload;
-      try {
-        payload = JSON.parse(atob(paddedPayload));
-      } catch (decodeError) {
-        // If base64 decoding fails, try direct parsing (in case token is encrypted differently)
-        throw new Error('Failed to decode token payload');
-      }
-      
-      // Extract user information from token payload
-      // Try multiple possible field names
-      const userInfo = {
-        email: payload.email || payload.email_id || payload.sub || '',
-        name: payload.name || payload.full_name || payload.given_name || payload.username || 'User',
-        picture: payload.picture || payload.avatar || payload.image || '',
-      };
-
-      // Validate that we have at least an email
-      if (!userInfo.email) {
+      // Validate required fields
+      if (!tokenData.email) {
         throw new Error('Token does not contain user email');
       }
+      
+      if (!tokenData.id) {
+        throw new Error('Token does not contain user id');
+      }
 
-      // Check if user is already signed in with same email
+      // Extract user information from token
+      const userInfo = {
+        email: tokenData.email,
+        name: tokenData.email.split('@')[0] || 'User', // Use email prefix as name if name not available
+        picture: '', // Picture not in token, can be fetched separately if needed
+        id: tokenData.id,
+        google_id: tokenData.google_id,
+        role: tokenData.role,
+      };
+      console.log({tokenData})
+      // Prepare user data for localStorage
+      const platformUserData = {
+        email: tokenData.email,
+        name: userInfo.name,
+        picture: userInfo.picture,
+        id: tokenData.id,
+        google_id: tokenData.google_id,
+        role: tokenData.role ,
+        token: token,
+        // Store token metadata
+        tokenExpiry: tokenData.exp ? new Date(tokenData.exp * 1000).toISOString() : null,
+        tokenIssuedAt: tokenData.iat ? new Date(tokenData.iat * 1000).toISOString() : null,
+      };
+
+      // Check if user is already signed in with same token
       const storedUser = localStorage.getItem('platform_user');
       if (storedUser) {
         try {
@@ -102,9 +105,25 @@ export default function PlatformLogin() {
         }
       }
 
+      // Store complete user data in localStorage
+      localStorage.setItem('platform_user', JSON.stringify(platformUserData));
+      
+      // Also store token data separately for easy access
+      localStorage.setItem('jwt_token_data', JSON.stringify({
+        id: tokenData.id,
+        email: tokenData.email,
+        google_id: tokenData.google_id,
+        role: tokenData.role,
+        exp: tokenData.exp,
+        iat: tokenData.iat,
+      }));
+
       // Sign in the user with token
       signIn({
-        ...userInfo,
+        email: userInfo.email,
+        name: userInfo.name,
+        picture: userInfo.picture,
+        role: userInfo.role as 'admin' | 'user' | 'viewer',
         token: token,
       });
       

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { PlatformSidebar } from '@/components/platform/PlatformSidebar';
 import { EntityCard } from '@/components/platform/EntityCard';
@@ -14,9 +15,12 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Plus, Menu, Loader2, Building2, Sparkles, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { getUserRole } from '@/lib/role';
+import SubEntityPlatform from './SubEntityPlatform';
 
 export default function Platform() {
   const { isAuthenticated, signIn } = useAuth();
+  const navigate = useNavigate();
   const [showSignInModal, setShowSignInModal] = useState(!isAuthenticated);
   const [activeTab, setActiveTab] = useState('entities');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -32,8 +36,17 @@ export default function Platform() {
       return;
     }
     
-    // Load entities only when authenticated
-    loadEntities();
+    // Check user role and redirect if subentity
+    const role = getUserRole();
+    if (role === 'subentity') {
+      // Don't load entities for sub-entity users
+      return;
+    }
+    
+    // Load entities only when authenticated and role is entity
+    if (role === 'entity') {
+      loadEntities();
+    }
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -218,6 +231,12 @@ export default function Platform() {
         </div>
       </Layout>
     );
+  }
+
+  // Check role and show appropriate flow
+  const role = getUserRole();
+  if (role === 'subentity') {
+    return <SubEntityPlatform />;
   }
 
   return (

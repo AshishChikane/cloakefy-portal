@@ -1,31 +1,34 @@
 import { cn } from '@/lib/utils';
-import { Building2, History, Settings, X, LogOut } from 'lucide-react';
+import { Users, Settings, X, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-interface PlatformSidebarProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+interface SubEntitySidebarProps {
   mobileOpen: boolean;
   onMobileClose: () => void;
 }
 
 const navItems = [
-  { id: 'entities', label: 'Entities', icon: Building2, description: 'Manage your entities' },
-  { id: 'transactions', label: 'Transactions', icon: History, description: 'View all transactions' },
-  // { id: 'settings', label: 'Settings', icon: Settings, description: 'Platform settings' },
+  { id: 'sub-users', label: 'Sub Users', icon: Users, description: 'View sub users', path: '/platform' },
+  // { id: 'settings', label: 'Settings', icon: Settings, description: 'Platform settings', path: '/platform/settings' },
 ];
 
-export function PlatformSidebar({ activeTab, onTabChange, mobileOpen, onMobileClose }: PlatformSidebarProps) {
+export function SubEntitySidebar({ mobileOpen, onMobileClose }: SubEntitySidebarProps) {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSignOut = () => {
     signOut();
     toast.success('Signed out successfully');
     navigate('/');
+  };
+
+  const handleNavClick = (path: string) => {
+    navigate(path);
+    onMobileClose();
   };
 
   return (
@@ -40,8 +43,8 @@ export function PlatformSidebar({ activeTab, onTabChange, mobileOpen, onMobileCl
       
       {/* Sidebar */}
       <aside className={cn(
-        "fixed top-16 left-0 bottom-0 w-72 bg-gradient-to-b from-sidebar via-sidebar to-sidebar/95 border-r border-sidebar-border/50 z-50 transition-transform lg:translate-x-0 shadow-2xl",
-        mobileOpen ? "translate-x-0" : "-translate-x-full"
+        "fixed top-16 left-0 bottom-0 w-72 bg-gradient-to-b from-sidebar via-sidebar to-sidebar/95 border-r border-sidebar-border/50 z-50 transition-transform lg:translate-x-0 shadow-2xl overflow-y-auto",
+        mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* Mobile close button */}
         <div className="flex items-center justify-between p-4 lg:hidden border-b border-sidebar-border/50">
@@ -57,14 +60,12 @@ export function PlatformSidebar({ activeTab, onTabChange, mobileOpen, onMobileCl
         {/* Navigation */}
         <nav className="p-4 space-y-2">
           {navItems.map((item) => {
-            const isActive = activeTab === item.id;
+            const isActive = location.pathname === item.path || 
+                           (item.path === '/platform' && (location.pathname.startsWith('/platform') || location.pathname.startsWith('/sub-entity/')));
             return (
               <button
                 key={item.id}
-                onClick={() => {
-                  onTabChange(item.id);
-                  onMobileClose();
-                }}
+                onClick={() => handleNavClick(item.path)}
                 className={cn(
                   "w-full flex items-start gap-4 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden",
                   isActive
@@ -129,3 +130,4 @@ export function PlatformSidebar({ activeTab, onTabChange, mobileOpen, onMobileCl
     </>
   );
 }
+

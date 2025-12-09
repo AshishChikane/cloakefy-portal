@@ -119,15 +119,13 @@ export async function getEntities(): Promise<Entity[]> {
       }));
     }
     
-    // Fallback to mock data if API fails
-    console.warn('API response format unexpected, using mock data');
-    await delay(500);
-    return [...mockEntities];
+    // Return empty array if API fails or no entities found
+    console.warn('API response format unexpected or no entities found');
+    return [];
   } catch (error) {
     console.error('Error fetching entities:', error);
-    // Fallback to mock data on error
-    await delay(500);
-    return [...mockEntities];
+    // Return empty array on error instead of mock data
+    return [];
   }
 }
 
@@ -342,6 +340,208 @@ export async function getSubUsers(entityId: string): Promise<SubUser[]> {
     // Fallback to mock data on error
     await delay(400);
     return mockSubUsers.filter(su => su.entityId === entityId);
+  }
+}
+
+// API Response Types for Get Sub Entity by Email
+interface GetSubEntityByEmailApiResponse {
+  isSuccess: boolean;
+  result: {
+    sub_entity: {
+      sub_entity_id: number;
+      email_id: string;
+      name: string;
+      role: string;
+      entity_id: number;
+      createdAt: string;
+      updatedAt: string;
+    };
+    sub_entity_wallet: {
+      wallet_id: number;
+      sub_entity_id: number;
+      address: string;
+      encrypted_private_key: string;
+      network: string;
+      chain_id: string;
+      createdAt: string;
+      updatedAt: string;
+    };
+  };
+  message: string;
+  statusCode: number;
+}
+
+// Get sub-entity by email
+export async function getSubEntityByEmail(email: string): Promise<SubUser | null> {
+  try {
+    console.log('Fetching sub-entity by email:', email);
+    // POST request with email in body
+    const response = await axiosInstance.post<GetSubEntityByEmailApiResponse>(
+      '/v1/sub-entities/get-sub-entity-by-email',
+      { "email_id":email  }, // Pass email in request body
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (response.data.isSuccess && response.data.result) {
+      const { sub_entity, sub_entity_wallet } = response.data.result;
+      
+      // Note: The wallet response doesn't include balances, so we'll need to fetch them separately
+      // For now, return the sub-user with wallet address
+      return {
+        id: String(sub_entity.sub_entity_id),
+        entityId: String(sub_entity.entity_id),
+        name: sub_entity.name,
+        role: sub_entity.role,
+        email_id: sub_entity.email_id,
+        walletAddress: sub_entity_wallet.address || '',
+        walletBalance: undefined, // Will be fetched separately if needed
+      };
+    }
+    
+    return null;
+  } catch (error: any) {
+    console.error('Error fetching sub-entity by email:', error);
+    throw error;
+  }
+}
+
+// Get all sub-users for the current logged-in sub-entity user
+export async function getAllSubUsers(): Promise<SubUser[]> {
+  try {
+    // Get user email from jwt_token_data or platform_user
+    const jwtTokenData = localStorage.getItem('jwt_token_data');
+    const platformUser = localStorage.getItem('platform_user');
+    
+    let userEmail: string | null = null;
+    
+    if (jwtTokenData) {
+      try {
+        const userData = JSON.parse(jwtTokenData);
+        userEmail = userData.email;
+      } catch (e) {
+        console.error('Error parsing jwt_token_data:', e);
+      }
+    }
+    
+    if (!userEmail && platformUser) {
+      try {
+        const user = JSON.parse(platformUser);
+        userEmail = user.email;
+      } catch (e) {
+        console.error('Error parsing platform_user:', e);
+      }
+    }
+    
+    if (!userEmail) {
+      throw new Error('User email not found');
+    }
+
+    // First try: Get sub-entity by email using the new endpoint
+    try {
+      console.log('Fetching sub-entity by email from localStorage:', userEmail);
+      const subUser = await getSubEntityByEmail(userEmail);
+      if (subUser) {
+        console.log('Sub-entity found:', subUser);
+        // Try to get wallet balances by fetching entity details
+        try {
+          const entityResponse = await axiosInstance.get(`/v1/entities/${subUser.entityId}`);
+          if (entityResponse.data.isSuccess && entityResponse.data.result?.sub_entities) {
+            const subEntity = entityResponse.data.result.sub_entities.find(
+              (se: any) => String(se.sub_entity_id) === subUser.id
+            );
+            if (subEntity?.wallet?.balances) {
+              subUser.walletBalance = {
+                avax: subEntity.wallet.balances.avax,
+                eusdc: subEntity.wallet.balances.eusdc,
+                eusdt: subEntity.wallet.balances.eusdt,
+              };
+            }
+          }
+        } catch (balanceError) {
+          console.log('Could not fetch wallet balances:', balanceError);
+          // Continue without balances
+        }
+        
+        return [subUser];
+      }
+    } catch (emailError: any) {
+      console.error('get-sub-entity-by-email endpoint failed:', emailError);
+      console.log('Error details:', emailError.response?.data || emailError.message);
+      console.log('Trying fallback methods');
+    }
+
+    // Fallback: Try to get sub-entity details by ID
+    const jwtData = jwtTokenData ? JSON.parse(jwtTokenData) : null;
+    const userId = jwtData?.id;
+    
+    if (userId) {
+      try {
+        const response = await axiosInstance.get(`/v1/sub-entities/${userId}`);
+        
+        if (response.data.isSuccess && response.data.result) {
+          const subEntity = response.data.result;
+          const wallet = subEntity.wallet;
+          
+          return [{
+            id: String(subEntity.sub_entity_id),
+            entityId: String(subEntity.entity_id),
+            name: subEntity.name,
+            role: subEntity.role,
+            email_id: subEntity.email_id,
+            walletAddress: wallet?.address || '',
+            walletBalance: wallet?.balances ? {
+              avax: wallet.balances.avax,
+              eusdc: wallet.balances.eusdc,
+              eusdt: wallet.balances.eusdt,
+            } : undefined,
+          }];
+        }
+      } catch (subEntityError) {
+        console.log('Sub-entity endpoint not available, trying entities endpoint');
+      }
+    }
+
+    // Final fallback: Get all entities and find sub-entities matching user email or ID
+    const entitiesResponse = await axiosInstance.get('/v1/entities');
+    if (entitiesResponse.data.isSuccess && entitiesResponse.data.result) {
+      const allSubUsers: SubUser[] = [];
+      for (const entity of entitiesResponse.data.result) {
+        if (entity.sub_entities && Array.isArray(entity.sub_entities)) {
+          entity.sub_entities.forEach((subEntity: any) => {
+            // Match by email or sub_entity_id
+            if (subEntity.email_id === userEmail || 
+                (userId && String(subEntity.sub_entity_id) === String(userId))) {
+              const wallet = subEntity.wallet;
+              allSubUsers.push({
+                id: String(subEntity.sub_entity_id),
+                entityId: String(subEntity.entity_id),
+                name: subEntity.name,
+                role: subEntity.role,
+                email_id: subEntity.email_id,
+                walletAddress: wallet?.address || '',
+                walletBalance: wallet?.balances ? {
+                  avax: wallet.balances.avax,
+                  eusdc: wallet.balances.eusdc,
+                  eusdt: wallet.balances.eusdt,
+                } : undefined,
+              });
+            }
+          });
+        }
+      }
+      if (allSubUsers.length > 0) {
+        return allSubUsers;
+      }
+    }
+    
+    return [];
+  } catch (error: any) {
+    console.error('Error fetching all sub users:', error);
+    return [];
   }
 }
 
@@ -617,6 +817,94 @@ export async function withdrawFromEntity(entityId: string, amount: number): Prom
     throw new Error(response.data.message || 'Failed to withdraw funds');
   } catch (error: any) {
     console.error('Error withdrawing funds:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to withdraw funds';
+    throw new Error(errorMessage);
+  }
+}
+
+// API Response Types for Sub-Entity Deposit
+interface SubEntityDepositApiResponse {
+  isSuccess: boolean;
+  result?: any;
+  message: string;
+  statusCode: number;
+}
+
+// API Response Types for Sub-Entity Withdraw
+interface SubEntityWithdrawApiResponse {
+  isSuccess: boolean;
+  result?: any;
+  message: string;
+  statusCode: number;
+}
+
+// Deposit to sub-entity
+export async function depositToSubEntity(subEntityId: string, amount: number): Promise<void> {
+  try {
+    // Get API key from localStorage
+    const apiKey = localStorage.getItem('api_key');
+    
+    if (!apiKey) {
+      throw new Error('API key not found. Please create an entity first.');
+    }
+
+    // Call the API endpoint
+    const response = await axiosInstance.post<SubEntityDepositApiResponse>(
+      '/v1/sub-entities/deposit',
+      {
+        sub_entity_id: Number(subEntityId),
+        amount: amount,
+      },
+      {
+        headers: {
+          'x-secret-key': apiKey,
+        },
+      }
+    );
+
+    if (response.data.isSuccess) {
+      return;
+    }
+
+    throw new Error(response.data.message || 'Failed to deposit funds');
+  } catch (error: any) {
+    console.error('Error depositing funds to sub-entity:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to deposit funds';
+    throw new Error(errorMessage);
+  }
+}
+
+// Withdraw from sub-entity
+export async function withdrawFromSubEntity(subEntityId: string, amount: number): Promise<void> {
+  try {
+    // Get API key from localStorage
+    const apiKey = localStorage.getItem('api_key');
+    
+    if (!apiKey) {
+      throw new Error('API key not found. Please create an entity first.');
+    }
+
+    // Call the API endpoint
+    const response = await axiosInstance.post<SubEntityWithdrawApiResponse>(
+      '/v1/sub-entities/withdraw',
+      {
+        sub_entity_id: Number(subEntityId),
+        amount: amount,
+      },
+      {
+        headers: {
+          'x-secret-key': apiKey,
+        },
+      }
+    );
+
+    if (response.data.isSuccess) {
+      return;
+    }
+
+    throw new Error(response.data.message || 'Failed to withdraw funds');
+  } catch (error: any) {
+    console.error('Error withdrawing funds from sub-entity:', error);
     const errorMessage = error.response?.data?.message || error.message || 'Failed to withdraw funds';
     throw new Error(errorMessage);
   }

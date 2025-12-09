@@ -28,6 +28,7 @@ const App = () => (
             <Route path="/docs" element={<Docs />} />
             <Route path="/docs/:slug" element={<Docs />} />
             <Route path="*" element={<NotFound />} />
+            
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

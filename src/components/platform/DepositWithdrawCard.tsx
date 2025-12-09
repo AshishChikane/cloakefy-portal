@@ -53,20 +53,22 @@ export function DepositWithdrawCard({ entityId, baseToken, onDeposit, onWithdraw
     setProcessing(true);
     try {
       if (activeTab === 'deposit') {
-        // Call the deposit API
-        await depositToEntity(entityId, numAmount);
-        toast.success(`Successfully deposited ${numAmount} ${displayToken}`);
-        // Call onDeposit callback if provided (for refreshing entity data)
+        // Call onDeposit callback if provided (it will handle the API call)
         if (onDeposit) {
           await onDeposit(numAmount);
+        } else {
+          // Fallback: Call the deposit API directly
+          await depositToEntity(entityId, numAmount);
+          toast.success(`Successfully deposited ${numAmount} ${displayToken}`);
         }
       } else {
-        // Call the withdraw API
-        await withdrawFromEntity(entityId, numAmount);
-        toast.success(`Successfully withdrew ${numAmount} ${displayToken}`);
-        // Call onWithdraw callback if provided (for refreshing entity data)
+        // Call onWithdraw callback if provided (it will handle the API call)
         if (onWithdraw) {
           await onWithdraw(numAmount);
+        } else {
+          // Fallback: Call the withdraw API directly
+          await withdrawFromEntity(entityId, numAmount);
+          toast.success(`Successfully withdrew ${numAmount} ${displayToken}`);
         }
       }
       setAmount('');

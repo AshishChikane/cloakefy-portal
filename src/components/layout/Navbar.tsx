@@ -29,20 +29,31 @@ export function Navbar() {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              to={link.href}
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                location.pathname === link.href 
-                  ? "text-primary" 
-                  : "text-muted-foreground"
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {navLinks.map((link) => {
+            // Check if current path matches the link
+            // For platform, also check if path starts with /platform, /entity, or /sub-entity
+            const isActive = link.href === '/platform'
+              ? location.pathname === link.href || 
+                location.pathname.startsWith('/platform') || 
+                location.pathname.startsWith('/entity/') || 
+                location.pathname.startsWith('/sub-entity/')
+              : location.pathname === link.href;
+            
+            return (
+              <Link
+                key={link.href}
+                to={link.href}
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary",
+                  isActive 
+                    ? "text-primary" 
+                    : "text-muted-foreground"
+                )}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Mobile Menu Button */}
@@ -58,21 +69,32 @@ export function Navbar() {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-border/50 bg-background/95 backdrop-blur-xl">
           <div className="px-4 py-4 space-y-4">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  "block text-sm font-medium transition-colors",
-                  location.pathname === link.href 
-                    ? "text-primary" 
-                    : "text-muted-foreground"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              // Check if current path matches the link
+              // For platform, also check if path starts with /platform, /entity, or /sub-entity
+              const isActive = link.href === '/platform'
+                ? location.pathname === link.href || 
+                  location.pathname.startsWith('/platform') || 
+                  location.pathname.startsWith('/entity/') || 
+                  location.pathname.startsWith('/sub-entity/')
+                : location.pathname === link.href;
+              
+              return (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "block text-sm font-medium transition-colors",
+                    isActive 
+                      ? "text-primary" 
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}
