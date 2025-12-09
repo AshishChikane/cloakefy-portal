@@ -105,7 +105,42 @@ interface GetEntitiesApiResponse {
 // API functions
 export async function getEntities(): Promise<Entity[]> {
   try {
-    const response = await axiosInstance.get<GetEntitiesApiResponse>('/v1/entities');
+    // Get user email from jwt_token_data or platform_user
+    const jwtTokenData = localStorage.getItem('jwt_token_data');
+    const platformUser = localStorage.getItem('platform_user');
+    
+    let userEmail: string | null = null;
+    
+    if (jwtTokenData) {
+      try {
+        const userData = JSON.parse(jwtTokenData);
+        userEmail = userData.email;
+      } catch (e) {
+        console.error('Error parsing jwt_token_data:', e);
+      }
+    }
+    
+    if (!userEmail && platformUser) {
+      try {
+        const user = JSON.parse(platformUser);
+        userEmail = user.email;
+      } catch (e) {
+        console.error('Error parsing platform_user:', e);
+      }
+    }
+    
+    if (!userEmail) {
+      console.error('User email not found in localStorage');
+      return [];
+    }
+
+    // Make POST request with email_id in body
+    const response = await axiosInstance.post<GetEntitiesApiResponse>(
+      '/v1/entities/get-entity',
+      {
+        email_id: userEmail,
+      }
+    );
     
     if (response.data.isSuccess && response.data.result) {
       // Map API response to Entity interface

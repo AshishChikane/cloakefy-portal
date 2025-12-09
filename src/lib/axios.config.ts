@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://a950858c5b66.ngrok-free.app',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://x402.cloakefy.com',
   headers: {
     'ngrok-skip-browser-warning': 'true',
     'Content-Type': 'application/json',

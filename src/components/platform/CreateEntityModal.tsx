@@ -30,8 +30,8 @@ export function CreateEntityModal({ open, onOpenChange, onSubmit: onSubmitCallba
       return;
     }
 
-    // const emailId = user?.email;
-    const emailId = 'work.ashishc@gmail.com'
+    const emailId = user?.email;
+
     if (!emailId) {
       toast.error('User email not found. Please sign in again.');
       return;
