@@ -238,7 +238,7 @@ export default function SubEntityPlatform() {
                 {/* Wallet Information Card */}
                 <div className="glass-card p-4 sm:p-6 hover:border-primary/30 transition-all border-border h-[470px] flex flex-col">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-4 flex-shrink-0">
-                    <h3 className="text-base sm:text-lg font-bold text-foreground">Wallet Information</h3>
+                    <h3 className="text-base sm:text-lg font-bold text-foreground">Wallet Informationnnnn</h3>
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       <Button 
                         variant="outline" 
@@ -359,7 +359,6 @@ export default function SubEntityPlatform() {
                   </div>
                 </div>
 
-                {/* Deposit & Withdraw Card */}
                 <DepositWithdrawCard
                   entityId={subUser.id}
                   baseToken={baseToken}

@@ -7,6 +7,7 @@ import { ArrowDownCircle, ArrowUpCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { depositToEntity, withdrawFromEntity } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DepositWithdrawCardProps {
   entityId: string;
@@ -19,7 +20,8 @@ export function DepositWithdrawCard({ entityId, baseToken, onDeposit, onWithdraw
   const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
   const [processing, setProcessing] = useState(false);
-
+  const { user } = useAuth();
+  // console.log({user})
   const getDisplayToken = (): string => {
     if (activeTab === 'deposit') {
       // For deposit, show regular token (remove 'e' prefix)
@@ -53,7 +55,7 @@ export function DepositWithdrawCard({ entityId, baseToken, onDeposit, onWithdraw
         // Call onDeposit callback if provided (it will handle the API call)
         
           // Fallback: Call the deposit API directly
-          await depositToEntity(entityId, numAmount);
+          await depositToSubEntity(entityId, numAmount);
           await onDeposit(numAmount);
           toast.success(`Successfully deposited ${numAmount} ${displayToken}`);
        
@@ -61,7 +63,7 @@ export function DepositWithdrawCard({ entityId, baseToken, onDeposit, onWithdraw
         // Call onWithdraw callback if provided (it will handle the API call)
       
           // Fallback: Call the withdraw API directly
-          await withdrawFromEntity(entityId, numAmount);
+          await withdrawFromSubEntity(entityId, numAmount);
           await onWithdraw(numAmount);
           toast.success(`Successfully withdrew ${numAmount} ${displayToken}`);
         
