@@ -154,7 +154,7 @@ export function HeroSection() {
             >
               {[
                 { value: '0.1%', label: 'Fee Rate' },
-                { value: '<2s', label: 'Settlement' },
+                { value: '<30s', label: 'Settlement' },
                 { value: '100%', label: 'Encrypted' },
               ].map((stat, i) => (
                 <div key={i} className="text-center sm:text-left">

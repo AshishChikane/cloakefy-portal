@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Entity, SubUser, Transaction, CreateSubUserRequest, TransferRequest } from '@/types/api';
+import { useState, useEffect, useRef } from 'react';
+import { Entity, SubUser, CreateSubUserRequest, TransferRequest } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { SubUsersList } from './SubUsersList';
 import { TransferForm } from './TransferForm';
-import { TransactionHistory } from './TransactionHistory';
+import { TransactionHistory, TransactionHistoryRef } from './TransactionHistory';
 import { DepositWithdrawCard } from './DepositWithdrawCard';
-import { getSubUsers, getTransactions, getEntityBalance, createSubUser, getEntity, resendVerification } from '@/services/api';
+import { getSubUsers, getEntityBalance, createSubUser, getEntity, resendVerification } from '@/services/api';
 import { toast } from 'sonner';
 import { Copy, RefreshCw, ArrowLeft, Loader2, Wallet, TrendingUp, Sparkles, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -18,12 +18,11 @@ interface EntityDetailProps {
 
 export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailProps) {
   const [subUsers, setSubUsers] = useState([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingSubUsers, setLoadingSubUsers] = useState(true);
-  const [loadingTransactions, setLoadingTransactions] = useState(true);
   const [refreshingBalance, setRefreshingBalance] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
   const [entityData, setEntityData] = useState<Entity>(entity);
+  const transactionHistoryRef = useRef<TransactionHistoryRef>(null);
   
   useEffect(() => {
     loadData();
@@ -39,20 +38,14 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
 
   const loadData = async () => {
     setLoadingSubUsers(true);
-    setLoadingTransactions(true);
     
     try {
-      const [usersData, txData] = await Promise.all([
-        getSubUsers(entity.id),
-        getTransactions(entity.id),
-      ]);
+      const usersData = await getSubUsers(entity.id);
       setSubUsers(usersData);
-      setTransactions(txData);
     } catch (error) {
-      toast.error('Failed to load entity data');
+      toast.error('Failed to load sub users');
     } finally {
       setLoadingSubUsers(false);
-      setLoadingTransactions(false);
     }
   };
 
@@ -95,13 +88,11 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
   const getIsRegistered = (): boolean => {
     if (!entityData.walletBalance) return false;
     
-    // Check based on base token
     if (entityData.baseToken === 'eUSDC') {
       return entityData.walletBalance.eusdc?.isRegistered ?? false;
     } else if (entityData.baseToken === 'eUSDT') {
       return entityData.walletBalance.eusdt?.isRegistered ?? false;
     } else if (entityData.baseToken === 'eAVAX') {
-      // AVAX doesn't have isRegistered, so return true
       return true;
     }
     
@@ -113,7 +104,6 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
       const newUser = await createSubUser(entity.id, data);
       setSubUsers([...subUsers, newUser]);
       toast.success('Sub user added successfully');
-      // Reload sub-users to get the latest data from API
       const updatedSubUsers = await getSubUsers(entity.id);
       setSubUsers(updatedSubUsers);
     } catch (error: any) {
@@ -125,9 +115,13 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
 
   const handleTransfer = async (data: TransferRequest) => {
     try {
-      // Note: createTransfer is now handled in TransferForm component
-      // This callback is just for refreshing data after transfer
       await loadEntityData();
+      
+      // Refresh transaction history to show the latest transaction
+      if (transactionHistoryRef.current) {
+        await transactionHistoryRef.current.refresh();
+      }
+      
       toast.success('Transfer completed successfully');
     } catch (error: any) {
       toast.error(error.message || 'Failed to refresh data after transfer');
@@ -148,7 +142,6 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      {/* Back button */}
       <button
         onClick={onBack}
         className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group"
@@ -156,8 +149,6 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         Back to Entities
       </button>
-
-      {/* Header */}
       <div className="flex items-center gap-2.5 sm:gap-3 pb-3 sm:pb-4 border-b border-border/50">
         <div className="relative flex-shrink-0">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary/20 via-primary/15 to-primary/10 flex items-center justify-center border border-primary/20">
@@ -175,8 +166,6 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
           </div>
         </div>
       </div>
-
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
         <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all border-border">
           <div className="flex items-center justify-between mb-1.5">
@@ -186,14 +175,10 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
           <div className="flex items-baseline gap-1.5">
             <p className="text-base sm:text-lg font-bold text-foreground">
               {(() => {
-                // Calculate balance from walletBalance based on baseToken
-                // tokenBalance = USDC, encryptedBalance = eUSDC
                 if (entityData.walletBalance) {
                   if (entityData.baseToken === 'eUSDC' && entityData.walletBalance.eusdc) {
-                    // eUSDC balance is encryptedBalance
                     return parseFloat(entityData.walletBalance.eusdc.encryptedBalance || '0').toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                   } else if (entityData.baseToken === 'eUSDT' && entityData.walletBalance.eusdt) {
-                    // eUSDT balance is encryptedBalance
                     return parseFloat(entityData.walletBalance.eusdt.encryptedBalance || '0').toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                   } else if (entityData.baseToken === 'eAVAX' && entityData.walletBalance.avax) {
                     return parseFloat(entityData.walletBalance.avax.balance || '0').toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
@@ -217,7 +202,7 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
             <span className="text-xs font-medium text-muted-foreground">Transactions</span>
             <Sparkles className="w-3.5 h-3.5 text-primary" />
           </div>
-          <p className="text-base sm:text-lg font-bold text-foreground">{transactions.length}</p>
+          <p className="text-base sm:text-lg font-bold text-foreground">-</p>
         </div>
       </div>
 
@@ -261,13 +246,6 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
                   </Button>
                 </div>
               </div>
-              
-              {/* <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1.5">Base Token</p>
-                <p className="text-sm font-semibold text-foreground">{entityData.baseToken}</p>
-              </div> */}
-
-              {/* Wallet Balances */}
               {entityData.walletBalance && (
                 <div>
                   <p className="text-xs font-medium text-muted-foreground mb-2">Wallet Balances</p>
@@ -316,8 +294,6 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
                   </div>
                 </div>
               )}
-
-              {/* Verification Status */}
               {!getIsRegistered() && (
                 <div className="p-2.5 rounded-lg bg-orange-500/10 border border-orange-500/20">
                   <div className="flex items-start gap-2 mb-2">
@@ -372,14 +348,10 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
               </div>
             </div>
           </div>
-
-          {/* 3rd Card - Deposit & Withdraw */}
           <DepositWithdrawCard
             entityId={entityData.id}
             baseToken={entityData.baseToken}
             onDeposit={async (amount) => {
-              // Deposit API is handled in DepositWithdrawCard
-              // Refresh entity data to get updated balances
               await loadEntityData();
             }}
             onWithdraw={async (amount) => {
@@ -388,17 +360,12 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
             }}
           />
         </div>
-        
-        {/* Right column */}
         <div className="space-y-4 flex flex-col">
-          {/* 2nd Card - Sub Users */}
           <SubUsersList
             subUsers={subUsers}
             loading={loadingSubUsers}
             onAddSubUser={handleAddSubUser}
           />
-
-          {/* 4th Card - Transfer Tokens to Sub Users */}
           <TransferForm
             subUsers={subUsers}
             baseToken={entityData.baseToken}
@@ -407,11 +374,9 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
           />
         </div>
       </div>
-
-      {/* Transaction History */}
       <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all border-border">
         <h3 className="text-sm sm:text-base font-bold text-foreground mb-3 sm:mb-4">Transaction History</h3>
-        <TransactionHistory transactions={transactions} loading={loadingTransactions} />
+        <TransactionHistory ref={transactionHistoryRef} entityId={entityData.id} />
       </div>
     </motion.div>
   );

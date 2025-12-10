@@ -1,18 +1,65 @@
+import { useState, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { Transaction } from '@/types/api';
 import { ExternalLink, Loader2, History, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import { getTransactions } from '@/services/api';
 
 interface TransactionHistoryProps {
-  transactions: Transaction[];
-  loading: boolean;
+  entityId?: string;
+  transactions?: Transaction[];
+  loading?: boolean;
 }
 
-export function TransactionHistory({ transactions, loading }: TransactionHistoryProps) {
-  const shortAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  const shortHash = (hash: string) => `${hash.slice(0, 10)}...${hash.slice(-6)}`;
+export interface TransactionHistoryRef {
+  refresh: () => Promise<void>;
+}
 
-  const statusConfig = {
+export const TransactionHistory = forwardRef<TransactionHistoryRef, TransactionHistoryProps>(
+  ({ entityId, transactions: propsTransactions, loading: propsLoading }, ref) => {
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const loadTransactions = useCallback(async () => {
+      if (!entityId) {
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const data = await getTransactions(entityId);
+        console.log({data});
+        setTransactions(data);
+      } catch (error) {
+        console.error('Error loading transactions:', error);
+        setTransactions([]);
+      } finally {
+        setLoading(false);
+      }
+    }, [entityId]);
+
+    useEffect(() => {
+      if (entityId) {
+        loadTransactions();
+      } else if (propsTransactions !== undefined) {
+        setTransactions(propsTransactions);
+        setLoading(propsLoading ?? false);
+      }
+    }, [entityId, propsTransactions, propsLoading, loadTransactions]);
+
+    // Expose refresh function via ref
+    useImperativeHandle(ref, () => ({
+      refresh: async () => {
+        await loadTransactions();
+      },
+    }), [loadTransactions]);
+
+    const displayTransactions = entityId ? transactions : (propsTransactions || []);
+    const displayLoading = entityId ? loading : (propsLoading ?? false);
+    const shortAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+    const shortHash = (hash: string) => `${hash.slice(0, 10)}...${hash.slice(-6)}`;
+
+    const statusConfig = {
     Pending: {
       color: 'text-yellow-400',
       bgColor: 'bg-yellow-400/10',
@@ -33,35 +80,35 @@ export function TransactionHistory({ transactions, loading }: TransactionHistory
     },
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (transactions.length === 0) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center py-16"
-      >
-        <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-primary/10 flex items-center justify-center">
-          <History className="w-8 h-8 text-primary opacity-50" />
+    if (displayLoading) {
+      return (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-        <p className="text-muted-foreground font-medium">No transactions yet</p>
-        <p className="text-sm text-muted-foreground/70 mt-1">Transactions will appear here once you start making transfers</p>
-      </motion.div>
-    );
-  }
+      );
+    }
 
-  return (
+    if (displayTransactions.length === 0) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-16"
+        >
+          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-primary/10 flex items-center justify-center">
+            <History className="w-8 h-8 text-primary opacity-50" />
+          </div>
+          <p className="text-muted-foreground font-medium">No transactions yet</p>
+          <p className="text-sm text-muted-foreground/70 mt-1">Transactions will appear here once you start making transfers</p>
+        </motion.div>
+      );
+    }
+
+    return (
     <div className="overflow-x-auto">
       <div className="min-w-full">
         <div className="space-y-2">
-          {transactions.map((tx, index) => {
+          {displayTransactions.map((tx, index) => {
             const status = statusConfig[tx.status];
             const StatusIcon = status.icon;
             
@@ -120,4 +167,5 @@ export function TransactionHistory({ transactions, loading }: TransactionHistory
       </div>
     </div>
   );
-}
+  }
+);

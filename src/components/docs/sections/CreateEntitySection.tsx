@@ -13,7 +13,6 @@ export function CreateEntitySection() {
   const baseUrl = 'https://your-api-base-url.com'; // Replace with your actual API base URL
 
   const curlExample = `curl -X POST ${baseUrl}/v1/entities \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
   -H "X-User-Email: user@example.com" \\
   -H "ngrok-skip-browser-warning: true" \\
   -H "Content-Type: application/json" \\
@@ -27,7 +26,6 @@ export function CreateEntitySection() {
   const jsExample = `const response = await fetch('${baseUrl}/v1/entities', {
   method: 'POST',
   headers: {
-    'Authorization': 'Bearer YOUR_TOKEN',
     'X-User-Email': 'user@example.com',
     'ngrok-skip-browser-warning': 'true',
     'Content-Type': 'application/json',

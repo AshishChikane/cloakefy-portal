@@ -5,14 +5,12 @@ export function ListSubUsersSection() {
   const baseUrl = 'https://your-api-base-url.com'; // Replace with your actual API base URL
 
   const curlExample = `curl -X GET ${baseUrl}/v1/entities/1 \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
   -H "X-User-Email: user@example.com" \\
   -H "ngrok-skip-browser-warning: true"`;
 
   const jsExample = `const response = await fetch('${baseUrl}/v1/entities/1', {
   method: 'GET',
   headers: {
-    'Authorization': 'Bearer YOUR_TOKEN',
     'X-User-Email': 'user@example.com',
     'ngrok-skip-browser-warning': 'true',
   },
@@ -91,7 +89,6 @@ const result = await response.json();
       <div className="glass-card p-3 sm:p-4 space-y-2">
         <h4 className="text-sm sm:text-base font-medium text-foreground">Headers</h4>
         <ul className="text-xs sm:text-sm text-muted-foreground space-y-1">
-          <li><code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">Authorization: Bearer YOUR_TOKEN</code> - Your authentication token</li>
           <li><code className="text-primary bg-secondary/50 px-1.5 py-0.5 rounded">X-User-Email: user@example.com</code> - Your email address</li>
         </ul>
       </div>

@@ -4,7 +4,9 @@ import {
   Transaction, 
   CreateEntityRequest, 
   CreateSubUserRequest, 
-  TransferRequest 
+  TransferRequest,
+  TransactionStatus,
+  BaseToken
 } from '@/types/api';
 import axiosInstance from '@/lib/axios.config';
 
@@ -738,9 +740,110 @@ export async function createTransfer(data: TransferRequest, subUsers: SubUser[],
   }
 }
 
+// API Response Types for Get Transactions
+interface TransactionRecipientApiResponse {
+  amount: string;
+  address: string;
+}
+
+interface TransactionApiResponse {
+  distribution_id: number;
+  batch_id: string;
+  entity_id: number;
+  total_amount: string;
+  service_fee: string;
+  payment_amount: string;
+  service_address: string;
+  recipients: TransactionRecipientApiResponse[];
+  status: string;
+  service_tx_hash: string;
+  distribution_tx_hash: string;
+  payment_authorization: string;
+  network: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface GetTransactionsApiResponse {
+  isSuccess: boolean;
+  result: {
+    entries: TransactionApiResponse[];
+  };
+  message: string;
+  statusCode: number;
+}
+
 export async function getTransactions(entityId: string): Promise<Transaction[]> {
-  await delay(400);
-  return mockTransactions.filter(tx => tx.entityId === entityId);
+  try {
+    const response = await axiosInstance.get<GetTransactionsApiResponse>(
+      `/v1/transactions/get-transaction-by-entity-id?entity_id=${entityId}`
+    );
+    console.log({response})
+    if (response.data.isSuccess && response.data.result?.response?.length > 0) {
+      const transactions: Transaction[] = [];
+      
+      // Fetch entity to get baseToken
+      let baseToken: BaseToken = 'eUSDC'; // Default
+      try {
+        const entity = await getEntity(entityId);
+        if (entity?.baseToken) {
+          baseToken = entity.baseToken;
+        }
+      } catch (error) {
+        console.warn('Could not fetch entity for baseToken:', error);
+      }
+      
+      // Fetch sub-users to match recipient addresses with names
+      let subUsers: SubUser[] = [];
+      try {
+        subUsers = await getSubUsers(entityId);
+      } catch (error) {
+        console.warn('Could not fetch sub-users for transaction mapping:', error);
+      }
+      
+      // Map each distribution entry to Transaction objects (one per recipient)
+      response.data.result.response.forEach((entry) => {
+        // Map status from API format to TransactionStatus
+        const mapStatus = (status: string): TransactionStatus => {
+          const upperStatus = status.toUpperCase();
+          if (upperStatus === 'COMPLETED' || upperStatus === 'SUCCESS') return 'Completed';
+          if (upperStatus === 'PENDING' || upperStatus === 'PROCESSING') return 'Pending';
+          return 'Failed';
+        };
+
+        // Create a transaction for each recipient
+        entry.recipients.forEach((recipient, index) => {
+          // Try to find the sub-user name by matching wallet address
+          const matchedSubUser = subUsers.find(
+            subUser => subUser.walletAddress?.toLowerCase() === recipient.address.toLowerCase()
+          );
+          const toName = matchedSubUser?.name || `Recipient ${index + 1}`;
+          
+          transactions.push({
+            id: `${entry.distribution_id}_${index}`,
+            entityId: String(entry.entity_id),
+            fromAddress: entry.service_address || '',
+            toAddress: recipient.address,
+            toName: toName,
+            amount: parseFloat(recipient.amount),
+            token: baseToken,
+            status: mapStatus(entry.status),
+            txHash: entry.service_tx_hash || '',
+            timestamp: entry.createdAt,
+          });
+        });
+      });
+      let result = transactions.sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      return result
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    return [];
+  }
 }
 
 // API Response Types for Get Private Key

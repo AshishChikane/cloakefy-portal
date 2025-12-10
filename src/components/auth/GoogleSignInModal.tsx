@@ -16,7 +16,7 @@ export function GoogleSignInModal({ open, onSignIn }: GoogleSignInModalProps) {
 
   const handleGoogleSignIn = async () => {
     // setLoading(true);
-      window.open(`https://x402.cloakefy.com/v1/auth/google`, "_self");
+    window.open(`https://x402.cloakefy.com/v1/auth/google`, "_self");
     // try {
     //   // Check if Google Identity Services is loaded
     //   if (window.google && window.google.accounts) {

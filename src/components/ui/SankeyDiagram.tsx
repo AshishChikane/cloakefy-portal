@@ -47,8 +47,6 @@ const getDummyData = (): SankeyData => {
       subUsers: [
         'Alice Johnson',
         'Bob Smith',
-        'Charlie Brown',
-        'Diana Prince',
       ],
     },
     {
@@ -57,13 +55,11 @@ const getDummyData = (): SankeyData => {
         'Eve Wilson',
         'Frank Miller',
         'Grace Lee',
-        'Henry Davis',
       ],
     },
     {
       entityName: 'Web3 Treasury',
       subUsers: [
-        'Ivy Chen',
         'Jack Taylor',
         'Kate Williams',
         'Liam Brown',
@@ -90,10 +86,7 @@ const getDummyData = (): SankeyData => {
   const links: SankeyLinkExtra[] = [];
   
   entityMappings.forEach((mapping, entityIndex) => {
-    // Find the starting index of this entity's sub-users in the nodes array
-    // Entities are at indices 0, 1, 2 (3 entities)
-    // Sub-users start at index 3
-    let subUserStartIndex = entities.length; // Start after all entities
+    let subUserStartIndex = entities.length;
     
     // Calculate offset for this entity's sub-users
     for (let i = 0; i < entityIndex; i++) {
@@ -118,7 +111,7 @@ export function SankeyDiagram() {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [data] = useState<SankeyData>(getDummyData());
-  const totalTransfers = 12; // Static count
+  const totalTransfers = 8; // Static count
 
   // Color palette for entities (3 entities only)
   const entityColors = [
@@ -142,7 +135,7 @@ export function SankeyDiagram() {
 
     svg.attr('width', width).attr('height', height);
 
-    const margin = { top: 10, right: 80, bottom: 10, left: 80 };
+    const margin = { top: 10, right: 80, bottom: 10, left: 150 }; // Increased left margin for entity name visibility
     const graphWidth = width - margin.left - margin.right;
     const graphHeight = height - margin.top - margin.bottom;
 
@@ -341,7 +334,7 @@ export function SankeyDiagram() {
       .data(nodes.filter((d) => d.type === 'entity'))
       .enter()
       .append('text')
-      .attr('x', (d) => (d.x0 || 0) - 6)
+      .attr('x', (d) => (d.x0 || 0) - 12) // More space from node for better visibility
       .attr('y', (d) => ((d.y0 || 0) + (d.y1 || 0)) / 2)
       .attr('dy', '0.35em')
       .attr('text-anchor', 'end')
@@ -389,18 +382,24 @@ export function SankeyDiagram() {
           style={{ minHeight: '350px', display: 'block' }}
         />
       </div>
-      <div className="flex items-center justify-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded" style={{ backgroundColor: entityColors[0] }}></div>
-          <span>Entity 1</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        <div className="glass-card p-4 rounded-xl">
+          <div className="flex items-center gap-3 mb-3">
+            <h4 className="text-sm font-semibold text-foreground">Encryption Layer</h4>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Advanced cryptographic protocols ensure complete transaction privacy and security through end-to-end encryption.
+          </p>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded" style={{ backgroundColor: entityColors[1] }}></div>
-          <span>Entity 2</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded" style={{ backgroundColor: entityColors[2] }}></div>
-          <span>Entity 3</span>
+        
+        <div className="glass-card p-4 rounded-xl">
+          <div className="flex items-center gap-3 mb-3">
+           
+            <h4 className="text-sm font-semibold text-foreground">x402 Protocol</h4>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Seamless token distribution with instant settlement, minimal fees, and full compliance verification.
+          </p>
         </div>
       </div>
     </div>

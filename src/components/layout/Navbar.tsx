@@ -21,10 +21,7 @@ export function Navbar() {
       <nav className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-lg">C</span>
-          </div>
-          <span className="font-semibold text-lg text-foreground">eX402</span>
+          <img src="../cloakefy.png" alt="eX402" className="w-full h-11" />
         </Link>
 
         {/* Desktop Navigation */}

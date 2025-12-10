@@ -4,7 +4,7 @@ import { Shield, Zap, Users, Globe } from 'lucide-react';
 
 const stats = [
   { icon: Shield, value: '100%', label: 'Encrypted', description: 'End-to-end encryption' },
-  { icon: Zap, value: '<2s', label: 'Settlement', description: 'Lightning fast execution' },
+  { icon: Zap, value: '<30s', label: 'Settlement', description: 'Lightning fast execution' },
   { icon: Users, value: '∞', label: 'Recipients', description: 'Unlimited batch size' },
   { icon: Globe, value: '24/7', label: 'Uptime', description: 'Always available' },
 ];
