@@ -287,7 +287,6 @@ export default function SubEntityDetailPage() {
                 </div>
               </div>
 
-              {/* Deposit & Withdraw Card */}
               <DepositWithdrawCard
                 entityId={subUser.id}
                 baseToken={baseToken}

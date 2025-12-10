@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowDownCircle, ArrowUpCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { depositToEntity, withdrawFromEntity } from '@/services/api';
+import { depositToEntity, depositToSubEntity, withdrawFromEntity, withdrawFromSubEntity } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface DepositWithdrawCardProps {
@@ -21,7 +21,8 @@ export function DepositWithdrawCard({ entityId, baseToken, onDeposit, onWithdraw
   const [amount, setAmount] = useState('');
   const [processing, setProcessing] = useState(false);
   const { user } = useAuth();
-  // console.log({user})
+  console.log({user})
+  console.log({entityId})
   const getDisplayToken = (): string => {
     if (activeTab === 'deposit') {
       // For deposit, show regular token (remove 'e' prefix)
