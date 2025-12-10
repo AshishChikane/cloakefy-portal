@@ -41,9 +41,7 @@ export function CreateEntityModal({ open, onOpenChange, onSubmit: onSubmitCallba
     try {
       // Call API function from api.ts to create entity
       // The createEntity function will automatically store api_key in localStorage if returned from API
-      const response = await createEntity({ name, type, baseToken }, emailId);
-      console.log({response})
-      
+      const response = await createEntity({ name, type, baseToken }, emailId);      
       // Get api_key from response if available, otherwise from localStorage
       const apiKeyFromResponse = response.api_key;
       const apiKeyFromStorage = localStorage.getItem('api_key');

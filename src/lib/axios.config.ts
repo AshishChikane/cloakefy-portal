@@ -6,7 +6,7 @@ const axiosInstance = axios.create({
     'ngrok-skip-browser-warning': 'true',
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 seconds timeout
+  timeout: 300000, // 30 seconds timeout
 });
 
 // Request interceptor - Add auth token and other headers

@@ -54,7 +54,7 @@ export function DepositWithdrawCard({ entityId, baseToken, onDeposit, onWithdraw
         
           // Fallback: Call the deposit API directly
           await depositToEntity(entityId, numAmount);
-          await onDeposit(amount);
+          await onDeposit(numAmount);
           toast.success(`Successfully deposited ${numAmount} ${displayToken}`);
        
       } else {
@@ -62,7 +62,7 @@ export function DepositWithdrawCard({ entityId, baseToken, onDeposit, onWithdraw
       
           // Fallback: Call the withdraw API directly
           await withdrawFromEntity(entityId, numAmount);
-          await onWithdraw(amount);
+          await onWithdraw(numAmount);
           toast.success(`Successfully withdrew ${numAmount} ${displayToken}`);
         
       }
@@ -80,8 +80,6 @@ export function DepositWithdrawCard({ entityId, baseToken, onDeposit, onWithdraw
         <h3 className="text-sm sm:text-base font-bold text-foreground mb-1">Deposit & Withdraw</h3>
         <p className="text-xs text-muted-foreground">Manage funds for this entity</p>
       </div>
-
-      {/* Tab Switcher */}
       <div className="flex gap-2 mb-4 p-1 bg-secondary/30 rounded-lg">
         <button
           onClick={() => {
@@ -113,7 +111,6 @@ export function DepositWithdrawCard({ entityId, baseToken, onDeposit, onWithdraw
         </button>
       </div>
 
-      {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 flex-1 flex flex-col">
         <div className="space-y-2">
           <Label htmlFor="amount" className="text-foreground font-medium text-sm sm:text-base">

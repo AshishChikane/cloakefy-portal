@@ -29,7 +29,7 @@ export function TransferForm({ subUsers, baseToken, entityId, onTransfer }: Tran
   const [loading, setLoading] = useState(false);
   const [needsPayment, setNeedsPayment] = useState(false);
   const [pendingTransferData, setPendingTransferData] = useState<TransferRequest | null>(null);
-  console.log({subUsers})
+ 
   const addRecipient = () => {
     setRecipients([...recipients, { id: Date.now().toString(), subUserId: '', amount: '' }]);
   };
@@ -44,6 +44,25 @@ export function TransferForm({ subUsers, baseToken, entityId, onTransfer }: Tran
     setRecipients(recipients.map(r => 
       r.id === id ? { ...r, [field]: value } : r
     ));
+  };
+
+  // Get available sub-users (not already selected in other recipients)
+  const getAvailableSubUsers = (currentRecipientId: string) => {
+    // Get currently selected sub-user ID for this recipient (if any)
+    const currentRecipient = recipients.find(r => r.id === currentRecipientId);
+    const currentSelectedId = currentRecipient?.subUserId;
+    
+    // Get all sub-user IDs that are selected in OTHER recipients
+    const selectedSubUserIds = recipients
+      .filter(r => r.id !== currentRecipientId && r.subUserId)
+      .map(r => r.subUserId);
+    
+    // Return all users that are either:
+    // 1. Not selected in any other recipient, OR
+    // 2. Currently selected in this recipient (so user can see their current selection)
+    return subUsers.filter(user => 
+      !selectedSubUserIds.includes(user.id) || user.id === currentSelectedId
+    );
   };
 
   const getTotalAmount = () => {
@@ -238,7 +257,7 @@ export function TransferForm({ subUsers, baseToken, entityId, onTransfer }: Tran
                           <SelectValue placeholder="Choose recipient" />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-border">
-                          {subUsers.map((user) => {
+                          {getAvailableSubUsers(recipient.id).map((user) => {
                             const isRegistered = isRecipientRegistered(user.id);
                             return (
                               <SelectItem key={user.id} value={user.id}>
@@ -258,6 +277,11 @@ export function TransferForm({ subUsers, baseToken, entityId, onTransfer }: Tran
                               </SelectItem>
                             );
                           })}
+                          {getAvailableSubUsers(recipient.id).length === 0 && (
+                            <div className="px-2 py-1.5 text-xs text-muted-foreground text-center">
+                              No available recipients
+                            </div>
+                          )}
                         </SelectContent>
                       </Select>
                       {selectedUser && (
