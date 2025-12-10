@@ -3,7 +3,7 @@ import { Transaction } from '@/types/api';
 import { ExternalLink, Loader2, History, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
-import { getTransactions } from '@/services/api';
+import { getTransactionsByEmailId } from '@/services/api';
 
 interface TransactionHistoryProps {
   entityId?: string;
@@ -15,19 +15,46 @@ export interface TransactionHistoryRef {
   refresh: () => Promise<void>;
 }
 
-export const TransactionHistory = forwardRef<TransactionHistoryRef, TransactionHistoryProps>(
+export const AllTransactionHistory = forwardRef<TransactionHistoryRef, TransactionHistoryProps>(
   ({ entityId, transactions: propsTransactions, loading: propsLoading }, ref) => {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
-
+    
     const loadTransactions = useCallback(async () => {
-      if (!entityId) {
+      // Get user email from jwt_token_data or platform_user
+      const jwtTokenData = localStorage.getItem('jwt_token_data');
+      const platformUser = localStorage.getItem('platform_user');
+      
+      let userEmail: string | null = null;
+      
+      if (jwtTokenData) {
+        try {
+          const userData = JSON.parse(jwtTokenData);
+          userEmail = userData.email;
+        } catch (e) {
+          console.error('Error parsing jwt_token_data:', e);
+        }
+      }
+      
+      if (!userEmail && platformUser) {
+        try {
+          const user = JSON.parse(platformUser);
+          userEmail = user.email;
+        } catch (e) {
+          console.error('Error parsing platform_user:', e);
+        }
+      }
+      
+      if (!userEmail) {
+        console.error('User email not found in localStorage');
+        setTransactions([]);
+        setLoading(false);
         return;
       }
 
       setLoading(true);
       try {
-        const data = await getTransactions(entityId);
+        const data = await getTransactionsByEmailId(userEmail);
         setTransactions(data);
       } catch (error) {
         console.error('Error loading transactions:', error);
@@ -35,26 +62,29 @@ export const TransactionHistory = forwardRef<TransactionHistoryRef, TransactionH
       } finally {
         setLoading(false);
       }
-    }, [entityId]);
+    }, []);
 
     useEffect(() => {
-      if (entityId) {
-        loadTransactions();
-      } else if (propsTransactions !== undefined) {
+      // Always load transactions by email_id, ignore entityId prop
+      loadTransactions();
+    }, [loadTransactions]);
+
+    // Handle propsTransactions if provided (for backward compatibility)
+    useEffect(() => {
+      if (propsTransactions !== undefined && !loading && transactions.length === 0) {
         setTransactions(propsTransactions);
         setLoading(propsLoading ?? false);
       }
-    }, [entityId, propsTransactions, propsLoading, loadTransactions]);
+    }, [propsTransactions, propsLoading, loading, transactions.length]);
 
-    // Expose refresh function via ref
     useImperativeHandle(ref, () => ({
       refresh: async () => {
         await loadTransactions();
       },
     }), [loadTransactions]);
 
-    const displayTransactions = entityId ? transactions : (propsTransactions || []);
-    const displayLoading = entityId ? loading : (propsLoading ?? false);
+    const displayTransactions = transactions;
+    const displayLoading = loading;
     const shortAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
     const shortHash = (hash: string) => `${hash.slice(0, 10)}...${hash.slice(-6)}`;
 

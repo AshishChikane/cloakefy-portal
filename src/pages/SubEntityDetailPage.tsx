@@ -32,7 +32,6 @@ export default function SubEntityDetailPage() {
     if (subUser?.id) {
       loadTransactions();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subUser?.id]);
 
   const loadSubUserData = async () => {

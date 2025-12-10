@@ -17,6 +17,7 @@ import { Plus, Menu, Loader2, Building2, Sparkles, Activity } from 'lucide-react
 import { motion } from 'framer-motion';
 import { getUserRole } from '@/lib/role';
 import SubEntityPlatform from './SubEntityPlatform';
+import { AllTransactionHistory } from '@/components/platform/AllTransactionHistory';
 
 export default function Platform() {
   const { isAuthenticated, signIn } = useAuth();
@@ -30,20 +31,14 @@ export default function Platform() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   useEffect(() => {
-    // Show sign-in modal if not authenticated
     if (!isAuthenticated) {
       setShowSignInModal(true);
       return;
     }
-    
-    // Check user role and redirect if subentity
     const role = getUserRole();
     if (role === 'subentity') {
-      // Don't load entities for sub-entity users
       return;
     }
-    
-    // Load entities only when authenticated and role is entity
     if (role === 'entity') {
       loadEntities();
     }
@@ -80,7 +75,6 @@ export default function Platform() {
 
   const handleCreateEntity = async (data: CreateEntityRequest) => {
     try {
-      // Reload entities to show the newly created entity
       await loadEntities();
     } catch (error) {
       toast.error('Failed to refresh entities list');
@@ -111,7 +105,6 @@ export default function Platform() {
               </Button>
             </div>
 
-            {/* Dashboard Overview */}
             {entities.length > 0 && (
               <div className="mb-4">
                 <DashboardOverview 
@@ -180,28 +173,7 @@ export default function Platform() {
               </p>
             </div>
             <div className="glass-card p-3 sm:p-4">
-              <TransactionHistory transactions={allTransactions} loading={loading} />
-            </div>
-          </div>
-        );
-      
-      case 'settings':
-        return (
-          <div className="space-y-3 sm:space-y-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1">Settings</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Configure your platform preferences
-              </p>
-            </div>
-            <div className="glass-card p-6 sm:p-8 text-center">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-              </div>
-              <h3 className="text-sm sm:text-base font-semibold text-foreground mb-1">Settings Coming Soon</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Advanced configuration options will be available here.
-              </p>
+              <AllTransactionHistory transactions={allTransactions} loading={loading} />
             </div>
           </div>
         );
