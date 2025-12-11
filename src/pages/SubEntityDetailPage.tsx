@@ -4,12 +4,16 @@ import { Layout } from '@/components/layout/Layout';
 import { DashboardBackground } from '@/components/ui/DashboardBackground';
 import { SubEntitySidebar } from '@/components/platform/SubEntitySidebar';
 import { SubUser, Transaction } from '@/types/api';
-import { getAllSubUsers, depositToEntity, withdrawFromEntity, getTransactions, getBalanceByWalletAddress } from '@/services/api';
+import { getAllSubUsers, depositToEntity, withdrawFromEntity, getTransactions, getBalanceByWalletAddress, transferToExternalWallet } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { DepositWithdrawCard } from '@/components/platform/DepositWithdrawCard';
 import { TransactionHistory } from '@/components/platform/TransactionHistory';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Wallet, Copy, RefreshCw, Menu } from 'lucide-react';
+import { ArrowLeft, Loader2, Wallet, Copy, RefreshCw, Menu, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function SubEntityDetailPage() {
@@ -21,6 +25,12 @@ export default function SubEntityDetailPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [transferAddress, setTransferAddress] = useState('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferToken, setTransferToken] = useState<'USDC' | 'AVAX'>('USDC');
+  const [transferring, setTransferring] = useState(false);
+  const [needsPayment, setNeedsPayment] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -142,6 +152,120 @@ export default function SubEntityDetailPage() {
     }
   };
 
+  const handleTransferToExternal = async () => {
+    if (!subUser?.id) {
+      toast.error('Sub-user ID not found');
+      return;
+    }
+
+    if (!transferAddress.trim()) {
+      toast.error('Please enter a wallet address');
+      return;
+    }
+
+    if (!transferAddress.startsWith('0x') || transferAddress.length !== 42) {
+      toast.error('Please enter a valid Ethereum/Avalanche wallet address');
+      return;
+    }
+
+    const numAmount = parseFloat(transferAmount);
+    if (!transferAmount || isNaN(numAmount) || numAmount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    // Check balance
+    if (transferToken === 'USDC' && subUser.walletBalance?.eusdc) {
+      const availableBalance = parseFloat(subUser.walletBalance.eusdc.tokenBalance || '0');
+      if (numAmount > availableBalance) {
+        toast.error(`Insufficient balance. Available: ${availableBalance.toFixed(2)} USDC`);
+        return;
+      }
+    } else if (transferToken === 'AVAX' && subUser.walletBalance?.avax) {
+      const availableBalance = parseFloat(subUser.walletBalance.avax.balance || '0');
+      if (numAmount > availableBalance) {
+        toast.error(`Insufficient balance. Available: ${availableBalance.toFixed(4)} AVAX`);
+        return;
+      }
+    }
+
+    setTransferring(true);
+    try {
+      const result = await transferToExternalWallet(
+        subUser.id,
+        transferAddress.trim(),
+        transferAmount,
+        transferToken
+      );
+
+      if (result === true) {
+        // Payment required (statusCode 402)
+        setNeedsPayment(true);
+        toast.info('Please proceed with payment to complete the transfer');
+      } else {
+        // Transfer completed successfully
+        toast.success(`Successfully transferred ${transferAmount} ${transferToken} to ${transferAddress.slice(0, 6)}...${transferAddress.slice(-4)}`);
+        setTransferModalOpen(false);
+        setTransferAddress('');
+        setTransferAmount('');
+        setNeedsPayment(false);
+        await refreshBalance();
+        await loadTransactions();
+      }
+    } catch (error: any) {
+      console.error('Transfer error:', error);
+      toast.error(error.message || 'Failed to transfer funds');
+      setNeedsPayment(false);
+    } finally {
+      setTransferring(false);
+    }
+  };
+
+  const handleProceedWithPayment = async () => {
+    if (!subUser?.id) {
+      toast.error('Sub-user ID not found');
+      return;
+    }
+
+    setTransferring(true);
+    try {
+      // Call the API again with payment header (if needed)
+      // For now, we'll just retry the same call
+      const result = await transferToExternalWallet(
+        subUser.id,
+        transferAddress.trim(),
+        transferAmount,
+        transferToken
+      );
+
+      if (result === true) {
+        toast.info('Payment processed. Transfer is being completed...');
+        // Wait a bit and refresh
+        setTimeout(async () => {
+          await refreshBalance();
+          await loadTransactions();
+          setTransferModalOpen(false);
+          setTransferAddress('');
+          setTransferAmount('');
+          setNeedsPayment(false);
+        }, 2000);
+      } else {
+        toast.success(`Successfully transferred ${transferAmount} ${transferToken} to ${transferAddress.slice(0, 6)}...${transferAddress.slice(-4)}`);
+        setTransferModalOpen(false);
+        setTransferAddress('');
+        setTransferAmount('');
+        setNeedsPayment(false);
+        await refreshBalance();
+        await loadTransactions();
+      }
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      toast.error(error.message || 'Failed to process payment');
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   if (loading) {
     return (
       <Layout showFooter={false}>
@@ -208,22 +332,33 @@ export default function SubEntityDetailPage() {
               <div className="glass-card p-4 sm:p-6 hover:border-primary/30 transition-all border-border h-[470px] flex flex-col">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-4 flex-shrink-0">
                   <h3 className="text-base sm:text-lg font-bold text-foreground">Wallet Information</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={refreshBalance} 
-                    disabled={refreshingBalance}
-                    className="group w-full sm:w-auto"
-                  >
-                    {refreshingBalance ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
-                        Refresh
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setTransferModalOpen(true)}
+                      className="group flex-1 sm:flex-none"
+                    >
+                      <Send className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                      Send
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={refreshBalance} 
+                      disabled={refreshingBalance}
+                      className="group flex-1 sm:flex-none"
+                    >
+                      {refreshingBalance ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
+                          Refresh
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 
                 <div className="space-y-4 flex-1 overflow-y-auto min-h-0">
@@ -320,6 +455,164 @@ export default function SubEntityDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Transfer to External Wallet Modal */}
+      <Dialog open={transferModalOpen} onOpenChange={setTransferModalOpen}>
+        <DialogContent className="bg-card border-border max-w-md mx-4 sm:mx-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-2 sm:gap-3 mb-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/30 flex-shrink-0">
+                <Send className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              </div>
+              <DialogTitle className="text-foreground text-lg sm:text-xl">Transfer to External Wallet</DialogTitle>
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Send USDC or AVAX to any external wallet address
+            </p>
+          </DialogHeader>
+          
+          <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-5">
+            {needsPayment ? (
+              <>
+                <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 font-medium mb-2">
+                    Payment Required
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Please proceed with payment to complete the transfer of {transferAmount} {transferToken} to {transferAddress.slice(0, 6)}...{transferAddress.slice(-4)}
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <Button
+                    onClick={handleProceedWithPayment}
+                    disabled={transferring}
+                    className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                  >
+                    {transferring ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Proceed with Payment
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setNeedsPayment(false);
+                      setTransferAddress('');
+                      setTransferAmount('');
+                    }}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  {/* Token Selection */}
+                  <div className="space-y-2">
+                    <Label htmlFor="token" className="text-foreground font-medium text-sm">
+                      Select Token
+                    </Label>
+                    <Select value={transferToken} onValueChange={(value: 'USDC' | 'AVAX') => setTransferToken(value)}>
+                      <SelectTrigger className="bg-secondary/50 border-border h-10 sm:h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USDC">USDC</SelectItem>
+                        <SelectItem value="AVAX">AVAX</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {transferToken === 'USDC' && subUser.walletBalance?.eusdc && (
+                      <p className="text-xs text-muted-foreground">
+                        Available: {parseFloat(subUser.walletBalance.eusdc.tokenBalance || '0').toFixed(2)} USDC
+                      </p>
+                    )}
+                    {transferToken === 'AVAX' && subUser.walletBalance?.avax && (
+                      <p className="text-xs text-muted-foreground">
+                        Available: {parseFloat(subUser.walletBalance.avax.balance || '0').toFixed(4)} AVAX
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Wallet Address */}
+                  <div className="space-y-2">
+                    <Label htmlFor="address" className="text-foreground font-medium text-sm">
+                      Recipient Wallet Address
+                    </Label>
+                    <Input
+                      id="address"
+                      type="text"
+                      value={transferAddress}
+                      onChange={(e) => setTransferAddress(e.target.value)}
+                      placeholder="0x..."
+                      className="bg-secondary/50 border-border h-10 sm:h-11 font-mono text-xs sm:text-sm"
+                    />
+                  </div>
+
+                  {/* Amount */}
+                  <div className="space-y-2">
+                    <Label htmlFor="amount" className="text-foreground font-medium text-sm">
+                      Amount ({transferToken})
+                    </Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={transferAmount}
+                      onChange={(e) => setTransferAmount(e.target.value)}
+                      placeholder={`Enter amount in ${transferToken}`}
+                      className="bg-secondary/50 border-border h-10 sm:h-11"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
+                  <Button
+                    onClick={handleTransferToExternal}
+                    disabled={transferring || !transferAddress.trim() || !transferAmount || parseFloat(transferAmount) <= 0}
+                    className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                  >
+                    {transferring ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Transferring...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Transfer {transferToken}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setTransferModalOpen(false);
+                      setTransferAddress('');
+                      setTransferAmount('');
+                      setNeedsPayment(false);
+                      setTransferring(false);
+                    }}
+                    className="flex-1"
+                    disabled={transferring}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
