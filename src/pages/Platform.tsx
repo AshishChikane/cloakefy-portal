@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { PlatformSidebar } from '@/components/platform/PlatformSidebar';
 import { EntityCard } from '@/components/platform/EntityCard';
@@ -22,8 +22,17 @@ import { AllTransactionHistory } from '@/components/platform/AllTransactionHisto
 export default function Platform() {
   const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showSignInModal, setShowSignInModal] = useState(!isAuthenticated);
-  const [activeTab, setActiveTab] = useState('entities');
+  // Get activeTab from location state or default to 'entities'
+  const [activeTab, setActiveTab] = useState((location.state as any)?.activeTab || 'entities');
+
+  // Update activeTab when location state changes (e.g., when navigating from EntityDetailPage)
+  useEffect(() => {
+    if ((location.state as any)?.activeTab) {
+      setActiveTab((location.state as any).activeTab);
+    }
+  }, [location.state]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
@@ -160,23 +169,23 @@ export default function Platform() {
           </div>
         );
       
-      case 'transactions':
-        return (
-          <div className="space-y-3 sm:space-y-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 flex items-center gap-2">
-                <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                All Transactions
-              </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                View and track all transaction history across entities
-              </p>
-            </div>
-            <div className="glass-card p-3 sm:p-4">
-              <AllTransactionHistory transactions={allTransactions} loading={loading} />
-            </div>
-          </div>
-        );
+      // case 'transactions':
+      //   return (
+      //     <div className="space-y-3 sm:space-y-4">
+      //       <div>
+      //         <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 flex items-center gap-2">
+      //           <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+      //           All Transactions
+      //         </h1>
+      //         <p className="text-xs sm:text-sm text-muted-foreground">
+      //           View and track all transaction history across entities
+      //         </p>
+      //       </div>
+      //       <div className="glass-card p-3 sm:p-4">
+      //         <AllTransactionHistory />
+      //       </div>
+      //     </div>
+      //   );
       
       default:
         return null;

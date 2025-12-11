@@ -21,8 +21,7 @@ export function DepositWithdrawCard({ entityId, baseToken, onDeposit, onWithdraw
   const [amount, setAmount] = useState('');
   const [processing, setProcessing] = useState(false);
   const { user } = useAuth();
-  console.log({user})
-  console.log({entityId})
+
   const getDisplayToken = (): string => {
     if (activeTab === 'deposit') {
       // For deposit, show regular token (remove 'e' prefix)

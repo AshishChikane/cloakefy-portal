@@ -3,7 +3,7 @@ import { Building2, History, Settings, X, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface PlatformSidebarProps {
   activeTab: string;
@@ -14,18 +14,30 @@ interface PlatformSidebarProps {
 
 const navItems = [
   { id: 'entities', label: 'Entities', icon: Building2, description: 'Manage your entities' },
-  { id: 'transactions', label: 'Transactions', icon: History, description: 'View all transactions' },
+  // { id: 'transactions', label: 'Transactions', icon: History, description: 'View all transactions' },
   // { id: 'settings', label: 'Settings', icon: Settings, description: 'Platform settings' },
 ];
 
 export function PlatformSidebar({ activeTab, onTabChange, mobileOpen, onMobileClose }: PlatformSidebarProps) {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSignOut = () => {
     signOut();
     toast.success('Signed out successfully');
     navigate('/');
+  };
+
+  const handleTabClick = (tabId: string) => {
+    // If we're on the platform page, just update the tab
+    if (location.pathname === '/platform') {
+      onTabChange(tabId);
+    } else {
+      // If we're on a different page (like EntityDetailPage), navigate to platform with the tab
+      navigate('/platform', { state: { activeTab: tabId } });
+    }
+    onMobileClose();
   };
 
   return (
@@ -61,10 +73,7 @@ export function PlatformSidebar({ activeTab, onTabChange, mobileOpen, onMobileCl
             return (
               <button
                 key={item.id}
-                onClick={() => {
-                  onTabChange(item.id);
-                  onMobileClose();
-                }}
+                onClick={() => handleTabClick(item.id)}
                 className={cn(
                   "w-full flex items-start gap-4 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden",
                   isActive

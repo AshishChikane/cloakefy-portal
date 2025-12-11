@@ -6,12 +6,32 @@ import {
   CreateSubUserRequest, 
   TransferRequest,
   TransactionStatus,
-  BaseToken
+  BaseToken,
+  WalletBalance
 } from '@/types/api';
 import axiosInstance from '@/lib/axios.config';
 
 // Simulated delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Cache for entities and sub-users to avoid duplicate API calls
+const entityCache = new Map<string, { entity: Entity; timestamp: number }>();
+const subUsersCache = new Map<string, { subUsers: SubUser[]; timestamp: number }>();
+const CACHE_TTL = 60000; // 60 seconds cache TTL (increased from 30s)
+const entityApiCallInProgress = new Map<string, Promise<Entity | undefined>>(); // Track in-flight requests
+const subUsersApiCallInProgress = new Map<string, Promise<SubUser[]>>(); // Track in-flight requests
+
+// Clear cache function (can be called when entity is updated)
+export function clearEntityCache(entityId?: string) {
+  if (entityId) {
+    entityCache.delete(entityId);
+    subUsersCache.delete(entityId);
+  } else {
+    entityCache.clear();
+    subUsersCache.clear();
+  }
+}
+
 
 // Generate random hex string
 const randomHex = (length: number) => 
@@ -296,38 +316,65 @@ interface GetEntityApiResponse {
 }
 
 export async function getEntity(id: string): Promise<Entity | undefined> {
-  try {
-    const response = await axiosInstance.get<GetEntityApiResponse>(`/v1/entities/${id}`);
-    
-    if (response.data.isSuccess && response.data.result) {
-      const apiEntity = response.data.result;
-      const wallet = apiEntity.wallet;
-      // Map API response to Entity interface
-      return {
-        id: String(apiEntity.entity_id),
-        name: apiEntity.name,
-        type: apiEntity.entity_type as Entity['type'],
-        baseToken: apiEntity.base_token as Entity['baseToken'],
-        smartWalletAddress: wallet.address,
-        balance: 0, // Balance might need separate API call
-        walletBalance: wallet.balances ? {
-          avax: wallet.balances.avax,
-          eusdc: wallet.balances.eusdc,
-          eusdt: wallet.balances.eusdt,
-        } : undefined,
-      };
-    }
-    
-    // Fallback to mock data if API fails
-    console.warn('API response format unexpected, using mock data');
-    await delay(300);
-    return mockEntities.find(e => e.id === id);
-  } catch (error) {
-    console.error('Error fetching entity:', error);
-    // Fallback to mock data on error
-    await delay(300);
-    return mockEntities.find(e => e.id === id);
+  // Check cache first
+  const cached = entityCache.get(id);
+  const now = Date.now();
+  if (cached && (now - cached.timestamp) < CACHE_TTL) {
+    return cached.entity;
   }
+
+  // Check if there's already an in-flight request for this entity
+  const inProgress = entityApiCallInProgress.get(id);
+  if (inProgress) {
+    return inProgress;
+  }
+
+  // Create a new API call promise
+  const apiCall = (async () => {
+    try {
+      const response = await axiosInstance.get<GetEntityApiResponse>(`/v1/entities/${id}`);
+      
+      if (response.data.isSuccess && response.data.result) {
+        const apiEntity = response.data.result;
+        const wallet = apiEntity.wallet;
+        // Map API response to Entity interface
+        const entity: Entity = {
+          id: String(apiEntity.entity_id),
+          name: apiEntity.name,
+          type: apiEntity.entity_type as Entity['type'],
+          baseToken: apiEntity.base_token as Entity['baseToken'],
+          smartWalletAddress: wallet.address,
+          balance: 0, // Balance might need separate API call
+          walletBalance: wallet.balances ? {
+            avax: wallet.balances.avax,
+            eusdc: wallet.balances.eusdc,
+            eusdt: wallet.balances.eusdt,
+          } : undefined,
+        };
+        
+        // Cache the entity
+        entityCache.set(id, { entity, timestamp: Date.now() });
+        return entity;
+      }
+      
+      // Fallback to mock data if API fails
+      console.warn('API response format unexpected, using mock data');
+      await delay(300);
+      return mockEntities.find(e => e.id === id);
+    } catch (error) {
+      console.error('Error fetching entity:', error);
+      // Fallback to mock data on error
+      await delay(300);
+      return mockEntities.find(e => e.id === id);
+    } finally {
+      // Remove from in-progress map when done
+      entityApiCallInProgress.delete(id);
+    }
+  })();
+
+  // Store the promise so other calls can wait for it
+  entityApiCallInProgress.set(id, apiCall);
+  return apiCall;
 }
 
 export async function getEntityBalance(id: string): Promise<number> {
@@ -341,46 +388,87 @@ export async function getEntityBalance(id: string): Promise<number> {
 }
 
 export async function getSubUsers(entityId: string): Promise<SubUser[]> {
-  try {
-    // Get entity details which includes sub_entities
-    const entity = await getEntity(entityId);
-    if (!entity) {
-      return [];
-    }
+  // Check cache first
+  const cached = subUsersCache.get(entityId);
+  const now = Date.now();
+  if (cached && (now - cached.timestamp) < CACHE_TTL) {
+    return cached.subUsers;
+  }
 
-    const response = await axiosInstance.get<GetEntityApiResponse>(`/v1/entities/${entityId}`);
-    
-    if (response.data.isSuccess && response.data.result?.sub_entities) {
-      // Map sub_entities to SubUser interface
-      return response.data.result.sub_entities.map((subEntity): SubUser => {
-        const wallet = subEntity.wallet;
-        return {
-          id: String(subEntity.sub_entity_id),
-          entityId: String(subEntity.entity_id),
-          name: subEntity.name,
-          role: subEntity.role,
-          email_id: subEntity.email_id,
-          walletAddress: wallet?.address || '',
-          walletBalance: wallet?.balances ? {
+  // Check if there's already an in-flight request for this entity's sub-users
+  const inProgress = subUsersApiCallInProgress.get(entityId);
+  if (inProgress) {
+    return inProgress;
+  }
+
+  // Create a new API call promise
+  const apiCall = (async () => {
+    try {
+      const response = await axiosInstance.get<GetEntityApiResponse>(`/v1/entities/${entityId}`);
+      
+      if (response.data.isSuccess && response.data.result) {
+        // Also cache the entity data since we're fetching it anyway
+        const apiEntity = response.data.result;
+        const wallet = apiEntity.wallet;
+        const entity: Entity = {
+          id: String(apiEntity.entity_id),
+          name: apiEntity.name,
+          type: apiEntity.entity_type as Entity['type'],
+          baseToken: apiEntity.base_token as Entity['baseToken'],
+          smartWalletAddress: wallet.address,
+          balance: 0,
+          walletBalance: wallet.balances ? {
             avax: wallet.balances.avax,
             eusdc: wallet.balances.eusdc,
             eusdt: wallet.balances.eusdt,
           } : undefined,
-          allocationType: undefined,
-          allocation: undefined,
         };
-      });
+        entityCache.set(entityId, { entity, timestamp: Date.now() });
+
+        // Map sub_entities to SubUser interface
+        if (response.data.result.sub_entities) {
+          const subUsers = response.data.result.sub_entities.map((subEntity): SubUser => {
+            const wallet = subEntity.wallet;
+            return {
+              id: String(subEntity.sub_entity_id),
+              entityId: String(subEntity.entity_id),
+              name: subEntity.name,
+              role: subEntity.role,
+              email_id: subEntity.email_id,
+              walletAddress: wallet?.address || '',
+              walletBalance: wallet?.balances ? {
+                avax: wallet.balances.avax,
+                eusdc: wallet.balances.eusdc,
+                eusdt: wallet.balances.eusdt,
+              } : undefined,
+              allocationType: undefined,
+              allocation: undefined,
+            };
+          });
+          
+          // Cache the sub-users
+          subUsersCache.set(entityId, { subUsers, timestamp: Date.now() });
+          return subUsers;
+        }
+      }
+      
+      // Fallback to mock data
+      await delay(400);
+      return mockSubUsers.filter(su => su.entityId === entityId);
+    } catch (error) {
+      console.error('Error fetching sub users:', error);
+      // Fallback to mock data on error
+      await delay(400);
+      return mockSubUsers.filter(su => su.entityId === entityId);
+    } finally {
+      // Remove from in-progress map when done
+      subUsersApiCallInProgress.delete(entityId);
     }
-    
-    // Fallback to mock data
-    await delay(400);
-    return mockSubUsers.filter(su => su.entityId === entityId);
-  } catch (error) {
-    console.error('Error fetching sub users:', error);
-    // Fallback to mock data on error
-    await delay(400);
-    return mockSubUsers.filter(su => su.entityId === entityId);
-  }
+  })();
+
+  // Store the promise so other calls can wait for it
+  subUsersApiCallInProgress.set(entityId, apiCall);
+  return apiCall;
 }
 
 // API Response Types for Get Sub Entity by Email
@@ -718,8 +806,6 @@ export async function createTransfer(data: TransferRequest, subUsers: SubUser[],
         headers: headers,
       }
     );
-    console.log({response})
-    
     // If statusCode is 402, return true
     if (response.data.statusCode === 402) {
       return true;
@@ -767,7 +853,8 @@ interface TransactionApiResponse {
 interface GetTransactionsApiResponse {
   isSuccess: boolean;
   result: {
-    entries: TransactionApiResponse[];
+    entries?: TransactionApiResponse[];
+    response?: TransactionApiResponse[];
   };
   message: string;
   statusCode: number;
@@ -778,31 +865,26 @@ export async function getTransactions(entityId: string): Promise<Transaction[]> 
     const response = await axiosInstance.get<GetTransactionsApiResponse>(
       `/v1/transactions/get-transaction-by-entity-id?entity_id=${entityId}`
     );
-    console.log({response})
-    if (response.data.isSuccess && response.data.result?.response?.length > 0) {
+    const transactionEntries = response.data.result?.response || response.data.result?.entries || [];
+    if (response.data.isSuccess && transactionEntries.length > 0) {
       const transactions: Transaction[] = [];
+
+      // Use cached entity and sub-users to avoid duplicate API calls
+      let baseToken: BaseToken = 'eUSDC';
+      let subUsers: SubUser[] = [];
       
-      // Fetch entity to get baseToken
-      let baseToken: BaseToken = 'eUSDC'; // Default
       try {
         const entity = await getEntity(entityId);
         if (entity?.baseToken) {
           baseToken = entity.baseToken;
         }
-      } catch (error) {
-        console.warn('Could not fetch entity for baseToken:', error);
-      }
-      
-      // Fetch sub-users to match recipient addresses with names
-      let subUsers: SubUser[] = [];
-      try {
         subUsers = await getSubUsers(entityId);
       } catch (error) {
-        console.warn('Could not fetch sub-users for transaction mapping:', error);
+        console.warn('Could not fetch entity/sub-users for transaction mapping:', error);
       }
       
       // Map each distribution entry to Transaction objects (one per recipient)
-      response.data.result.response.forEach((entry) => {
+      transactionEntries.forEach((entry) => {
         // Map status from API format to TransactionStatus
         const mapStatus = (status: string): TransactionStatus => {
           const upperStatus = status.toUpperCase();
@@ -851,13 +933,32 @@ export async function getTransactionsByEmailId(emailId: string): Promise<Transac
     const response = await axiosInstance.get<GetTransactionsApiResponse>(
       `/v1/transactions/get-transaction-by-email-id?email_id=${emailId}`
     );
-    console.log({response})
     
     // Check both possible response structures: result.response or result.entries
     const transactionEntries = response.data.result?.response || response.data.result?.entries || [];
     
     if (response.data.isSuccess && transactionEntries.length > 0) {
       const transactions: Transaction[] = [];
+      
+      // Collect unique entity IDs to batch fetch entities and sub-users
+      const uniqueEntityIds = [...new Set(transactionEntries.map(entry => String(entry.entity_id)))];
+      
+      // Batch fetch all entities and sub-users upfront (using cache)
+      const entityMap = new Map<string, Entity>();
+      const subUsersMap = new Map<string, SubUser[]>();
+      
+      await Promise.all(uniqueEntityIds.map(async (entityId) => {
+        try {
+          const entity = await getEntity(entityId);
+          if (entity) {
+            entityMap.set(entityId, entity);
+          }
+          const subUsers = await getSubUsers(entityId);
+          subUsersMap.set(entityId, subUsers);
+        } catch (error) {
+          console.warn(`Could not fetch entity/sub-users for ${entityId}:`, error);
+        }
+      }));
       
       // Map each distribution entry to Transaction objects (one per recipient)
       transactionEntries.forEach((entry) => {
@@ -869,25 +970,11 @@ export async function getTransactionsByEmailId(emailId: string): Promise<Transac
           return 'Failed';
         };
 
-        // Try to get baseToken from the entry if available, otherwise default to eUSDC
-        let baseToken: BaseToken = 'eUSDC'; // Default
-        try {
-          // Try to fetch entity to get baseToken
-          const entity = getEntity(String(entry.entity_id));
-          if (entity?.baseToken) {
-            baseToken = entity.baseToken;
-          }
-        } catch (error) {
-          console.warn('Could not fetch entity for baseToken:', error);
-        }
-
-        // Fetch sub-users to match recipient addresses with names
-        let subUsers: SubUser[] = [];
-        try {
-          subUsers = getSubUsers(String(entry.entity_id));
-        } catch (error) {
-          console.warn('Could not fetch sub-users for transaction mapping:', error);
-        }
+        // Get baseToken from cached entity
+        const entityId = String(entry.entity_id);
+        const entity = entityMap.get(entityId);
+        const baseToken: BaseToken = entity?.baseToken || 'eUSDC';
+        const subUsers = subUsersMap.get(entityId) || [];
 
         // Create a transaction for each recipient
         entry.recipients.forEach((recipient, index) => {
@@ -899,7 +986,7 @@ export async function getTransactionsByEmailId(emailId: string): Promise<Transac
           
           transactions.push({
             id: `${entry.distribution_id}_${index}`,
-            entityId: String(entry.entity_id),
+            entityId: entityId,
             fromAddress: entry.service_address || '',
             toAddress: recipient.address,
             toName: toName,
@@ -1271,6 +1358,58 @@ export async function googleAuthCallback(data: GoogleAuthCallbackRequest): Promi
   } catch (error: any) {
     console.error('Error in Google auth callback:', error);
     const errorMessage = error.response?.data?.message || error.message || 'Failed to authenticate with Google';
+    throw new Error(errorMessage);
+  }
+}
+
+// API Response Types for Get Balance by Wallet Address
+interface GetBalanceByWalletAddressApiResponse {
+  isSuccess: boolean;
+  result: {
+    walletBalances: {
+      avax?: {
+        balance: string;
+        balanceWei: string;
+      };
+      eusdc?: {
+        tokenBalance: string;
+        tokenBalanceWei: string;
+        encryptedBalance: string;
+        encryptedBalanceWei: string;
+        isRegistered: boolean;
+      };
+      eusdt?: {
+        tokenBalance: string;
+        tokenBalanceWei: string;
+        encryptedBalance: string;
+        encryptedBalanceWei: string;
+        isRegistered: boolean;
+      };
+    };
+  };
+  message: string;
+  statusCode: number;
+}
+
+export async function getBalanceByWalletAddress(walletAddress: string): Promise<WalletBalance> {
+  try {
+    const response = await axiosInstance.get<GetBalanceByWalletAddressApiResponse>(
+      `/v1/transactions/get-balance-by-wallet-address?wallet_address=${walletAddress}`
+    );
+
+    if (response.data.isSuccess && response.data.result?.walletBalances) {
+      const balances = response.data.result.walletBalances;
+      return {
+        avax: balances.avax,
+        eusdc: balances.eusdc,
+        eusdt: balances.eusdt,
+      };
+    }
+
+    throw new Error(response.data.message || 'Failed to get balance');
+  } catch (error: any) {
+    console.error('Error fetching balance by wallet address:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to get balance';
     throw new Error(errorMessage);
   }
 }

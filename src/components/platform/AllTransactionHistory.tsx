@@ -66,16 +66,15 @@ export const AllTransactionHistory = forwardRef<TransactionHistoryRef, Transacti
 
     useEffect(() => {
       // Always load transactions by email_id, ignore entityId prop
-      loadTransactions();
-    }, [loadTransactions]);
-
-    // Handle propsTransactions if provided (for backward compatibility)
-    useEffect(() => {
-      if (propsTransactions !== undefined && !loading && transactions.length === 0) {
+      // Only load if propsTransactions are not provided (to avoid conflicts)
+      if (propsTransactions === undefined) {
+        loadTransactions();
+      } else {
+        // If propsTransactions are provided, use them directly
         setTransactions(propsTransactions);
         setLoading(propsLoading ?? false);
       }
-    }, [propsTransactions, propsLoading, loading, transactions.length]);
+    }, [loadTransactions, propsTransactions, propsLoading]);
 
     useImperativeHandle(ref, () => ({
       refresh: async () => {

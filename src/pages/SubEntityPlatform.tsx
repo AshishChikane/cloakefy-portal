@@ -3,7 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { DashboardBackground } from '@/components/ui/DashboardBackground';
 import { SubEntitySidebar } from '@/components/platform/SubEntitySidebar';
 import { SubUser, Transaction } from '@/types/api';
-import { getAllSubUsers, depositToSubEntity, withdrawFromSubEntity, getTransactions, getSubUserPrivateKey } from '@/services/api';
+import { getAllSubUsers, depositToSubEntity, withdrawFromSubEntity, getTransactions, getSubUserPrivateKey, getBalanceByWalletAddress } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { DepositWithdrawCard } from '@/components/platform/DepositWithdrawCard';
 import { TransactionHistory } from '@/components/platform/TransactionHistory';
@@ -71,11 +71,28 @@ export default function SubEntityPlatform() {
   const refreshBalance = async () => {
     setRefreshingBalance(true);
     try {
-      await loadSubUserData();
-      await loadTransactions();
-      toast.success('Balance refreshed');
-    } catch (error) {
-      toast.error('Failed to refresh balance');
+      // Fetch fresh balance using wallet address API
+      if (subUser?.walletAddress) {
+        const walletBalance = await getBalanceByWalletAddress(subUser.walletAddress);
+        
+        // Update sub-user data with fresh balance
+        const updatedSubUser: SubUser = {
+          ...subUser,
+          walletBalance: walletBalance,
+        };
+        
+        setSubUser(updatedSubUser);
+        
+        // Also refresh transactions
+        await loadTransactions();
+        
+        toast.success('Balance refreshed');
+      } else {
+        toast.error('Wallet address not found');
+      }
+    } catch (error: any) {
+      console.error('Error refreshing balance:', error);
+      toast.error(error.message || 'Failed to refresh balance');
     } finally {
       setRefreshingBalance(false);
     }

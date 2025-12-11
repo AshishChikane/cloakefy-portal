@@ -5,7 +5,7 @@ import { SubUsersList } from './SubUsersList';
 import { TransferForm } from './TransferForm';
 import { TransactionHistory, TransactionHistoryRef } from './TransactionHistory';
 import { DepositWithdrawCard } from './DepositWithdrawCard';
-import { getSubUsers, getEntityBalance, createSubUser, getEntity, resendVerification } from '@/services/api';
+import { getSubUsers, getEntityBalance, createSubUser, getEntity, resendVerification, clearEntityCache, getBalanceByWalletAddress } from '@/services/api';
 import { toast } from 'sonner';
 import { Copy, RefreshCw, ArrowLeft, Loader2, Wallet, TrendingUp, Sparkles, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -25,8 +25,10 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
   const transactionHistoryRef = useRef<TransactionHistoryRef>(null);
   
   useEffect(() => {
+    // Only load data once when entity.id changes
     loadData();
-    loadEntityData();
+    // Don't call loadEntityData here - getSubUsers already fetches entity data
+    // We'll use the entity prop directly unless we need fresh data
     let jwt = localStorage.getItem('platform_user');
     // console.log({jwt})
     // localStorage.setItem('api_key', 'd9f7643f93827e7224d76fabfac42b430500e4d9aa0ab7a61597900c5a6a88a5');
@@ -51,6 +53,8 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
 
   const loadEntityData = async () => {
     try {
+      // Only clear cache if we explicitly need fresh data (e.g., after balance refresh)
+      // Otherwise, use cached data to avoid duplicate API calls
       const updatedEntity = await getEntity(entity.id);
       if (updatedEntity) {
         setEntityData(updatedEntity);
@@ -64,10 +68,29 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
   const refreshBalance = async () => {
     setRefreshingBalance(true);
     try {
-      await loadEntityData();
-      toast.success('Balance refreshed');
-    } catch (error) {
-      toast.error('Failed to refresh balance');
+      // Fetch fresh balance using wallet address API
+      if (entityData.smartWalletAddress) {
+        const walletBalance = await getBalanceByWalletAddress(entityData.smartWalletAddress);
+        
+        // Update entity data with fresh balance
+        const updatedEntity: Entity = {
+          ...entityData,
+          walletBalance: walletBalance,
+        };
+        
+        setEntityData(updatedEntity);
+        onEntityUpdate(updatedEntity);
+        
+        // Clear cache to ensure fresh data on next load
+        clearEntityCache(entity.id);
+        
+        toast.success('Balance refreshed');
+      } else {
+        toast.error('Wallet address not found');
+      }
+    } catch (error: any) {
+      console.error('Error refreshing balance:', error);
+      toast.error(error.message || 'Failed to refresh balance');
     } finally {
       setRefreshingBalance(false);
     }
