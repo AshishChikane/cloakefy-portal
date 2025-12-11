@@ -1413,3 +1413,78 @@ export async function getBalanceByWalletAddress(walletAddress: string): Promise<
     throw new Error(errorMessage);
   }
 }
+
+// API Response Types for Transfer to External Wallet
+interface TransferToExternalWalletApiResponse {
+  isSuccess: boolean;
+  result?: any;
+  message: string;
+  statusCode: number;
+}
+
+export async function transferToExternalWallet(
+  subEntityId: string,
+  recipientAddress: string,
+  amount: string,
+  token: 'USDC' | 'AVAX'
+): Promise<any> {
+  try {
+    // Get API key from localStorage
+    const apiKey = localStorage.getItem('api_key');
+    
+    if (!apiKey) {
+      throw new Error('API key not found. Please create an entity first.');
+    }
+
+    // Get sub-user's entity ID to use in the transfer
+    const subUsers = await getAllSubUsers();
+    const subUser = subUsers.find(su => su.id === subEntityId);
+    
+    if (!subUser) {
+      throw new Error('Sub-user not found');
+    }
+
+    if (!subUser.entityId) {
+      throw new Error('Entity ID not found for sub-user');
+    }
+
+    // Call the API endpoint - this transfers from entity to the external address
+    // The API will handle the transfer from the sub-user's wallet through the entity
+    const response = await axiosInstance.post<TransferToExternalWalletApiResponse>(
+      '/v1/facilitator/run',
+      {
+        entity_id: Number(subUser.entityId),
+        recipients: [
+          {
+            address: recipientAddress.trim(),
+            amount: amount,
+          },
+        ],
+        network: 'avalanche-fuji',
+      },
+      {
+        headers: {
+          'x-secret-key': apiKey,
+        },
+      }
+    );
+
+    // If statusCode is 402, return true (payment required)
+    if (response.data.statusCode === 402) {
+      return true;
+    }
+    
+    if (response.data.isSuccess) {
+      return response.data.result;
+    }
+
+    throw new Error(response.data.message || 'Failed to transfer to external wallet');
+  } catch (error: any) {
+    console.error('Error transferring to external wallet:', error);
+    if (error.response?.data?.statusCode === 402) {
+      return true;
+    }
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to transfer to external wallet';
+    throw new Error(errorMessage);
+  }
+}

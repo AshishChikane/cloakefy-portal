@@ -81,7 +81,7 @@ export function EntityCard({ entity, onSelect }: EntityCardProps) {
           </div>
           
           {/* Balance */}
-          <div className="flex items-center justify-between p-2.5 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20">
+          {/* <div className="flex items-center justify-between p-2.5 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20">
             <div className="flex items-center gap-1.5">
               <TrendingUp className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs font-medium text-muted-foreground">Balance</span>
@@ -92,10 +92,8 @@ export function EntityCard({ entity, onSelect }: EntityCardProps) {
               </div>
               <span className="text-xs text-muted-foreground font-medium">{entity.baseToken}</span>
             </div>
-          </div>
+          </div> */}
         </div>
-
-        {/* Shine effect */}
         <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
       </div>
     </motion.div>
