@@ -20,7 +20,7 @@ export default function EntityDetailPage() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('entities');
-
+  console.log({id})
   useEffect(() => {
     // Show sign-in modal if not authenticated
     if (!isAuthenticated) {
