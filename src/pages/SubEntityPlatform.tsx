@@ -495,6 +495,21 @@ export default function SubEntityPlatform() {
                         </div>
                       </div>
                     )}
+
+                    {/* Transfer to External Wallet Button */}
+                    <div className="pt-2 border-t border-border/50">
+                      <Button
+                        onClick={() => setTransferModalOpen(true)}
+                        className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-black font-semibold"
+                        size="sm"
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        Send to External Wallet
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Transfer USDC or AVAX to any external wallet
+                      </p>
+                    </div>
                   </div>
                 </div>
 

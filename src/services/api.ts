@@ -1436,31 +1436,24 @@ export async function transferToExternalWallet(
       throw new Error('API key not found. Please create an entity first.');
     }
 
-    // Get sub-user's entity ID to use in the transfer
-    const subUsers = await getAllSubUsers();
-    const subUser = subUsers.find(su => su.id === subEntityId);
-    
-    if (!subUser) {
-      throw new Error('Sub-user not found');
+    // Convert subEntityId to number
+    const subEntityIdNum = Number(subEntityId);
+    if (isNaN(subEntityIdNum)) {
+      throw new Error('Invalid sub-entity ID');
     }
 
-    if (!subUser.entityId) {
-      throw new Error('Entity ID not found for sub-user');
-    }
+    // Map token type: USDC maps to USDC, AVAX maps to AVAX
+    // Note: EUSDC (encrypted USDC) is a separate option but we're using USDC for regular transfers
+    const tokenType: 'AVAX' | 'USDC' | 'EUSDC' = token === 'USDC' ? 'USDC' : 'AVAX';
 
-    // Call the API endpoint - this transfers from entity to the external address
-    // The API will handle the transfer from the sub-user's wallet through the entity
+    // Call the API endpoint for sub-entity transfer
     const response = await axiosInstance.post<TransferToExternalWalletApiResponse>(
-      '/v1/facilitator/run',
+      '/v1/sub-entities/transfer',
       {
-        entity_id: Number(subUser.entityId),
-        recipients: [
-          {
-            address: recipientAddress.trim(),
-            amount: amount,
-          },
-        ],
-        network: 'avalanche-fuji',
+        sub_entity_id: subEntityIdNum,
+        recipient: recipientAddress.trim(),
+        amount: amount,
+        tokenType: tokenType,
       },
       {
         headers: {
