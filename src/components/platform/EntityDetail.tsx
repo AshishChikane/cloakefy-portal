@@ -387,10 +387,12 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
             entityId={entityData.id}
             baseToken={entityData.baseToken}
             onDeposit={async (amount) => {
+              await refreshBalance();
               await loadEntityData();
             }}
             onWithdraw={async (amount) => {
               await refreshBalance();
+              await loadEntityData();
             }}
           />
         </div>

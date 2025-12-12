@@ -3,7 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { DashboardBackground } from '@/components/ui/DashboardBackground';
 import { SubEntitySidebar } from '@/components/platform/SubEntitySidebar';
 import { SubUser, Transaction } from '@/types/api';
-import { getAllSubUsers, depositToSubEntity, withdrawFromSubEntity, getTransactions, getSubUserPrivateKey, getBalanceByWalletAddress, transferToExternalWallet } from '@/services/api';
+import { getAllSubUsers, depositToSubEntity, withdrawFromSubEntity, getTransactions, getSubUserPrivateKey, getBalanceByWalletAddress, transferToExternalWallet, TransferResult } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { DepositWithdrawCard } from '@/components/platform/DepositWithdrawCard';
 import { TransactionHistory } from '@/components/platform/TransactionHistory';
@@ -235,7 +235,30 @@ export default function SubEntityPlatform() {
         toast.info('Please proceed with payment to complete the transfer');
       } else {
         // Transfer completed successfully
-        toast.success(`Successfully transferred ${transferAmount} ${transferToken} to ${transferAddress.slice(0, 6)}...${transferAddress.slice(-4)}`);
+        const txHash = (result as TransferResult)?.transactionHash || (result as TransferResult)?.txHash;
+        const snowtraceUrl = txHash 
+          ? `https://testnet.snowtrace.io/tx/${txHash}`
+          : null;
+        
+        if (snowtraceUrl) {
+          toast.success(
+            <div className="flex flex-col gap-1">
+              <span>Successfully transferred {transferAmount} {transferToken} to {transferAddress.slice(0, 6)}...{transferAddress.slice(-4)}</span>
+              <a 
+                href={snowtraceUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline text-sm font-medium"
+              >
+                View on Snowtrace: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+              </a>
+            </div>,
+            { duration: 8000 }
+          );
+        } else {
+          toast.success(`Successfully transferred ${transferAmount} ${transferToken} to ${transferAddress.slice(0, 6)}...${transferAddress.slice(-4)}`);
+        }
+        
         setTransferModalOpen(false);
         setTransferAddress('');
         setTransferAmount('');
@@ -281,7 +304,30 @@ export default function SubEntityPlatform() {
           setNeedsPayment(false);
         }, 2000);
       } else {
-        toast.success(`Successfully transferred ${transferAmount} ${transferToken} to ${transferAddress.slice(0, 6)}...${transferAddress.slice(-4)}`);
+        const txHash = (result as TransferResult)?.transactionHash || (result as TransferResult)?.txHash;
+        const snowtraceUrl = txHash 
+          ? `https://testnet.snowtrace.io/tx/${txHash}`
+          : null;
+        
+        if (snowtraceUrl) {
+          toast.success(
+            <div className="flex flex-col gap-1">
+              <span>Successfully transferred {transferAmount} {transferToken} to {transferAddress.slice(0, 6)}...{transferAddress.slice(-4)}</span>
+              <a 
+                href={snowtraceUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline text-sm font-medium"
+              >
+                View on Snowtrace: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+              </a>
+            </div>,
+            { duration: 8000 }
+          );
+        } else {
+          toast.success(`Successfully transferred ${transferAmount} ${transferToken} to ${transferAddress.slice(0, 6)}...${transferAddress.slice(-4)}`);
+        }
+        
         setTransferModalOpen(false);
         setTransferAddress('');
         setTransferAmount('');
@@ -519,12 +565,6 @@ export default function SubEntityPlatform() {
                   onDeposit={handleDeposit}
                   onWithdraw={handleWithdraw}
                 />
-              </div>
-
-              {/* Transaction History Section */}
-              <div className="glass-card p-4 sm:p-6 border-border">
-                <h3 className="text-base sm:text-lg font-bold text-foreground mb-4">Transaction History</h3>
-                <TransactionHistory transactions={transactions} loading={loadingTransactions} />
               </div>
             </div>
           </div>

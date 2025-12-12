@@ -1412,9 +1412,19 @@ export async function getBalanceByWalletAddress(walletAddress: string): Promise<
 // API Response Types for Transfer to External Wallet
 interface TransferToExternalWalletApiResponse {
   isSuccess: boolean;
-  result?: any;
+  result?: {
+    transactionHash?: string;
+    txHash?: string;
+    [key: string]: any;
+  };
   message: string;
   statusCode: number;
+}
+
+export interface TransferResult {
+  transactionHash?: string;
+  txHash?: string;
+  [key: string]: any;
 }
 
 export async function transferToExternalWallet(
@@ -1422,7 +1432,7 @@ export async function transferToExternalWallet(
   recipientAddress: string,
   amount: string,
   token: 'USDC' | 'AVAX'
-): Promise<any> {
+): Promise<TransferResult | true> {
   try {
     // Get API key from localStorage
     const apiKey = localStorage.getItem('api_key');
@@ -1462,7 +1472,7 @@ export async function transferToExternalWallet(
       return true;
     }
     
-    if (response.data.isSuccess) {
+    if (response.data.isSuccess && response.data.result) {
       return response.data.result;
     }
 
