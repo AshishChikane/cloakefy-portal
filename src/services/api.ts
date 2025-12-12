@@ -1052,6 +1052,51 @@ export async function getSubUserPrivateKey(subEntityId: string): Promise<string>
   }
 }
 
+// API Response Types for Entity Private Key
+interface GetEntityPrivateKeyApiResponse {
+  isSuccess: boolean;
+  result: {
+    private_key: string;
+    entity_id: number;
+  };
+  message: string;
+  statusCode: number;
+}
+
+export async function getEntityPrivateKey(entityId: string): Promise<string> {
+  try {
+    // Get API key from localStorage
+    const apiKey = localStorage.getItem('api_key');
+    
+    if (!apiKey) {
+      throw new Error('API key not found. Please create an entity first.');
+    }
+
+    // Call the API endpoint
+    const response = await axiosInstance.post<GetEntityPrivateKeyApiResponse>(
+      '/v1/facilitator/private-key',
+      {
+        entity_id: Number(entityId),
+      },
+      {
+        headers: {
+          'x-secret-key': apiKey,
+        },
+      }
+    );
+
+    if (response.data.isSuccess && response.data.result) {
+      return response.data.result.private_key;
+    }
+
+    throw new Error(response.data.message || 'Failed to get private key');
+  } catch (error: any) {
+    console.error('Error fetching entity private key:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to get private key';
+    throw new Error(errorMessage);
+  }
+}
+
 // API Response Types for Deposit
 interface DepositApiResponse {
   isSuccess: boolean;

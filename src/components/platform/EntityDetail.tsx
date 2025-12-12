@@ -5,11 +5,13 @@ import { SubUsersList } from './SubUsersList';
 import { TransferForm } from './TransferForm';
 import { TransactionHistory, TransactionHistoryRef } from './TransactionHistory';
 import { DepositWithdrawCard } from './DepositWithdrawCard';
-import { getSubUsers, getEntityBalance, createSubUser, getEntity, resendVerification, clearEntityCache, getBalanceByWalletAddress } from '@/services/api';
+import { getSubUsers, getEntityBalance, createSubUser, getEntity, resendVerification, clearEntityCache, getBalanceByWalletAddress, getEntityPrivateKey } from '@/services/api';
 import { toast } from 'sonner';
-import { Copy, RefreshCw, ArrowLeft, Loader2, Wallet, TrendingUp, Sparkles, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Copy, RefreshCw, ArrowLeft, Loader2, Wallet, TrendingUp, Sparkles, ShieldAlert, CheckCircle2, Key, Eye, EyeOff, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { DepositWithdrawCardEnitiy } from './DepositWithdrawCardEnitiy';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 interface EntityDetailProps {
   entity: Entity;
@@ -24,6 +26,11 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
   const [sendingVerification, setSendingVerification] = useState(false);
   const [entityData, setEntityData] = useState<Entity>(entity);
   const transactionHistoryRef = useRef<TransactionHistoryRef>(null);
+  const [privateKeyModalOpen, setPrivateKeyModalOpen] = useState(false);
+  const [privateKey, setPrivateKey] = useState<string | null>(null);
+  const [loadingPrivateKey, setLoadingPrivateKey] = useState(false);
+  const [showPrivateKey, setShowPrivateKey] = useState(false);
+  const [copied, setCopied] = useState(false);
   
   useEffect(() => {
     // Only load data once when entity.id changes
@@ -169,6 +176,42 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
     toast.success('Address copied to clipboard');
   };
 
+  const copyPrivateKey = () => {
+    if (privateKey) {
+      navigator.clipboard.writeText(privateKey);
+      setCopied(true);
+      toast.success('Private key copied to clipboard');
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleExportPrivateKey = async () => {
+    if (!entityData.id) {
+      toast.error('Entity ID not found');
+      return;
+    }
+
+    setPrivateKeyModalOpen(true);
+    setPrivateKey(null);
+    setShowPrivateKey(false);
+    setLoadingPrivateKey(true);
+
+    try {
+      const key = await getEntityPrivateKey(entityData.id);
+      setPrivateKey(key);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to fetch private key');
+      setPrivateKeyModalOpen(false);
+    } finally {
+      setLoadingPrivateKey(false);
+    }
+  };
+
+  const maskPrivateKey = (key: string) => {
+    if (key.length <= 8) return '•'.repeat(key.length);
+    return `${key.slice(0, 4)}${'•'.repeat(key.length - 8)}${key.slice(-4)}`;
+  };
+
   const shortAddress = `${entityData.smartWalletAddress.slice(0, 10)}...${entityData.smartWalletAddress.slice(-8)}`;
 
   return (
@@ -246,22 +289,33 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
           <div className="glass-card p-3 sm:p-4 hover:border-primary/30 transition-all h-[470px] border-border flex flex-col">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-3 sm:mb-4">
               <h3 className="text-sm sm:text-base font-bold text-foreground">Wallet Information</h3>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={refreshBalance} 
-                disabled={refreshingBalance}
-                className="group w-full sm:w-auto"
-              >
-                {refreshingBalance ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
-                    Refresh
-                  </>
-                )}
-              </Button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleExportPrivateKey}
+                  className="group flex-1 sm:flex-initial"
+                >
+                  <Key className="w-4 h-4 mr-2" />
+                  Export Key
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={refreshBalance} 
+                  disabled={refreshingBalance}
+                  className="group flex-1 sm:flex-initial"
+                >
+                  {refreshingBalance ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
+                      Refresh
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
             
             <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
@@ -414,6 +468,115 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
         <h3 className="text-sm sm:text-base font-bold text-foreground mb-3 sm:mb-4">Transaction History</h3>
         <TransactionHistory ref={transactionHistoryRef} entityId={entityData.id} />
       </div>
+
+      {/* Private Key Export Modal */}
+      <Dialog open={privateKeyModalOpen} onOpenChange={setPrivateKeyModalOpen}>
+        <DialogContent className="bg-card border-border max-w-md mx-4 sm:mx-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-2 sm:gap-3 mb-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center border border-yellow-500/30 flex-shrink-0">
+                <Key className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
+              </div>
+              <DialogTitle className="text-foreground text-lg sm:text-xl">Private Key</DialogTitle>
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              ⚠️ Keep this private key secure. Never share it with anyone.
+            </p>
+          </DialogHeader>
+          
+          <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-5">
+            {loadingPrivateKey ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : privateKey ? (
+              <>
+                <div className="space-y-3">
+                  <div className="relative">
+                    <div className="p-3 sm:p-4 rounded-lg bg-gradient-to-br from-yellow-500/10 via-orange-500/10 to-red-500/10 border-2 border-yellow-500/30 relative overflow-hidden">
+                      {/* Animated background pattern */}
+                      <div className="absolute inset-0 opacity-5">
+                        <div className="absolute inset-0" style={{
+                          backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px)',
+                        }} />
+                      </div>
+                      
+                      <div className="relative">
+                        <div className="flex items-center justify-between mb-2 sm:mb-3">
+                          <Label className="text-xs font-semibold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">
+                            Private Key
+                          </Label>
+                          <button
+                            onClick={() => setShowPrivateKey(!showPrivateKey)}
+                            className="p-1.5 hover:bg-yellow-500/20 rounded-md transition-colors"
+                          >
+                            {showPrivateKey ? (
+                              <EyeOff className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                            ) : (
+                              <Eye className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                            )}
+                          </button>
+                        </div>
+                        
+                        <div className="relative">
+                          <code className="text-xs sm:text-sm font-mono text-foreground break-all block p-2.5 sm:p-3 bg-background/50 rounded-md border border-yellow-500/20">
+                            {showPrivateKey ? privateKey : maskPrivateKey(privateKey)}
+                          </code>
+                          
+                          {/* Shimmer effect */}
+                          {!showPrivateKey && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-500/20 to-transparent animate-pulse rounded-md" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-2.5 sm:p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <p className="text-xs text-red-600 dark:text-red-400 font-medium leading-relaxed">
+                      ⚠️ Security Warning: Anyone with access to this private key can control the wallet. Store it securely and never share it.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
+                  <Button
+                    onClick={copyPrivateKey}
+                    className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold text-sm sm:text-base"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-4 h-4 mr-2" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copy Private Key
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 text-sm sm:text-base"
+                    onClick={() => {
+                      setPrivateKeyModalOpen(false);
+                      setShowPrivateKey(false);
+                      setPrivateKey(null);
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-sm text-muted-foreground">Failed to load private key</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
