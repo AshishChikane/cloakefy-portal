@@ -10,18 +10,13 @@ import {
   WalletBalance
 } from '@/types/api';
 import axiosInstance from '@/lib/axios.config';
-
-// Simulated delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Cache for entities and sub-users to avoid duplicate API calls
 const entityCache = new Map<string, { entity: Entity; timestamp: number }>();
 const subUsersCache = new Map<string, { subUsers: SubUser[]; timestamp: number }>();
 const CACHE_TTL = 60000; // 60 seconds cache TTL (increased from 30s)
 const entityApiCallInProgress = new Map<string, Promise<Entity | undefined>>(); // Track in-flight requests
 const subUsersApiCallInProgress = new Map<string, Promise<SubUser[]>>(); // Track in-flight requests
 
-// Clear cache function (can be called when entity is updated)
 export function clearEntityCache(entityId?: string) {
   if (entityId) {
     entityCache.delete(entityId);

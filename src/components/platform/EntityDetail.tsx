@@ -125,13 +125,24 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
   const handleAddSubUser = async (data: CreateSubUserRequest) => {
     try {
       const newUser = await createSubUser(entity.id, data);
+      // Optimistically update UI immediately - this ensures instant visual feedback
       setSubUsers([...subUsers, newUser]);
       toast.success('Sub user added successfully');
+      
+      // Clear cache to ensure fresh data is fetched
+      clearEntityCache(entity.id);
+      
+      // Fetch fresh data from API to ensure consistency
       const updatedSubUsers = await getSubUsers(entity.id);
       setSubUsers(updatedSubUsers);
+      
+      // Also refresh entity data in case it has changed
+      await loadEntityData();
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to add sub user';
       toast.error(errorMessage);
+      // Reload sub-users on error to ensure consistency
+      await loadData();
       throw error;
     }
   };
