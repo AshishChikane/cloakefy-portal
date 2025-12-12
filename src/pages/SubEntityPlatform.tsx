@@ -237,7 +237,7 @@ export default function SubEntityPlatform() {
         // Transfer completed successfully
         const txHash = (result as TransferResult)?.transactionHash || (result as TransferResult)?.txHash;
         const snowtraceUrl = txHash 
-          ? `https://testnet.snowtrace.io/tx/${txHash}`
+          ? `https://snowtrace.io/tx/${txHash}`
           : null;
         
         if (snowtraceUrl) {
@@ -306,7 +306,7 @@ export default function SubEntityPlatform() {
       } else {
         const txHash = (result as TransferResult)?.transactionHash || (result as TransferResult)?.txHash;
         const snowtraceUrl = txHash 
-          ? `https://testnet.snowtrace.io/tx/${txHash}`
+          ? `https://snowtrace.io/tx/${txHash}`
           : null;
         
         if (snowtraceUrl) {
