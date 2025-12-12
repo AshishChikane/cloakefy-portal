@@ -9,6 +9,7 @@ import { getSubUsers, getEntityBalance, createSubUser, getEntity, resendVerifica
 import { toast } from 'sonner';
 import { Copy, RefreshCw, ArrowLeft, Loader2, Wallet, TrendingUp, Sparkles, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { DepositWithdrawCardEnitiy } from './DepositWithdrawCardEnitiy';
 
 interface EntityDetailProps {
   entity: Entity;
@@ -382,14 +383,13 @@ export function EntityDetail({ entity, onBack, onEntityUpdate }: EntityDetailPro
               </div>
             </div>
           </div>
-          <DepositWithdrawCard
+          <DepositWithdrawCardEnitiy
             entityId={entityData.id}
             baseToken={entityData.baseToken}
             onDeposit={async (amount) => {
               await loadEntityData();
             }}
             onWithdraw={async (amount) => {
-              // TODO: Implement withdraw API call
               await refreshBalance();
             }}
           />
